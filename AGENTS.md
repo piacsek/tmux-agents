@@ -147,6 +147,22 @@ been reinstalled, so the popup and status line the user sees always run the
 committed code. `tmux display -p`
 cannot evaluate `#()`; verify status-line output with `tmux run-shell` instead.
 
+## Releasing
+
+Releases are GitHub Releases built by `.github/workflows/release.yml` on a `v*` tag:
+one tarball per target (`aarch64-apple-darwin`, `x86_64-apple-darwin`,
+`x86_64-unknown-linux-gnu`) plus `.sha256`, with generated notes. The workflow
+refuses a tag whose version differs from `Cargo.toml`.
+
+1. Bump `version` in `Cargo.toml` (`Cargo.lock` follows on the next build) and
+   refresh the help snapshot: `INSTA_UPDATE=always cargo test --test snapshots`.
+2. Run the gates, commit `Release vX.Y.Z`, push `main`.
+3. `git tag vX.Y.Z && git push origin vX.Y.Z`, then `gh run watch` until the
+   `release` workflow is green and `gh release view vX.Y.Z` lists three tarballs.
+
+Semver: minor for new keys/subcommands/config, patch for fixes, major on a
+config-format break. Local installs keep using `cargo install --path .`.
+
 ## tmux integration (lives in the user's dotfiles, not here)
 
 ```
