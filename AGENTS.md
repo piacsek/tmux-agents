@@ -16,7 +16,8 @@ agents: it runs `<cmd>` at most once per TTL and serves the cached stdout.
 
 ```
 src/main.rs      CLI dispatch, event loop wiring (event::poll → Input::Tick every 500 ms)
-src/cli.rs       `tmux-agents` (TUI) | `status` | `watch` | `cached <ttl> -- <cmd>`
+src/cli.rs       `tmux-agents` (TUI) | `status` | `watch` | `config` | `cached <ttl> -- <cmd>`
+src/config.rs    Config (serde + toml), defaults, XDG path resolution, `label_map`
 src/watch.rs     Watcher (pure transition detector) + run() loop + pid lock for `watch`
 src/cached.rs    TTL cache for status-line widgets; key = hash of argv, freshness = file mtime
 src/registry.rs  lenient serde of ~/.claude/sessions/<pid>.json
@@ -48,6 +49,15 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
 
 ## Behaviour that is easy to break
 
+- **Config is loaded before any subcommand runs.** Missing file = `Config::default()`;
+  an unreadable file or unknown key is a hard error naming the file (`deny_unknown_fields`
+  on every table). `tmux-agents config` prints the effective TOML and doubles as the
+  reference. Constants that used to live in code (tick, stale threshold, preview
+  width/split, status prefix, watch timings, new-pane command, labels) now come from
+  `App::config`, `CliTmux::with_new_pane`, `status::render(_, &StatusLine)`,
+  `watch::run(_, _, _, &Watch)` and `discover(_, _, _, _, &labels)`. Preview is **off**
+  by default; tests that need it pass a `Config` with `preview.enabled = true` via
+  `Picker::with_config`, and the e2e preview test sets `TMUX_AGENTS_CONFIG`.
 - **Draw before the first read.** `run()` renders, then waits for input. The
   popup was blank until a keypress once; `tests/e2e.rs` guards it by running the
   real binary in a scratch tmux server and capturing the pane.
@@ -95,6 +105,13 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   stderr is discarded, matching the old `scripts/tmux-cached` shell script.
 - **Colors** come from the ANSI palette (idle is `dim` with no fg) so terminal
   themes apply. Do not hardcode hex.
+
+## Documentation rule
+
+Whenever behaviour changes, check that `README.md` still covers it and is still
+true: a key, a default, a subcommand, a config key. The README must stay terse:
+one line per feature, defaults in the TOML block, no prose that repeats the code.
+Depth belongs here in `AGENTS.md`, not in the README.
 
 ## Development
 

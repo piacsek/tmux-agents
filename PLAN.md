@@ -309,6 +309,15 @@ Twelve items from the review, each under /tdd:
 11. Popup 70% × 60%.
 12. Zero-session e2e for `status`.
 
+## Phase 4 — configuration — DONE 2026-09-07
+
+`~/.config/tmux-agents/config.toml` (XDG, `TMUX_AGENTS_CONFIG` override), `toml` crate, every
+table optional, unknown keys fatal, `tmux-agents config` prints the effective values. Tables:
+`picker` (tick, stale), `preview` (enabled **default false**, min_width, split), `status`
+(prefix, named_blocked), `watch` (interval, quiet, display, skip_active_client), `new_pane`
+(command, direction), `labels` (cwd → name, `~` expanded). Deferred: `[colors]` and `[keys]`
+theming, listed under "Considered" below.
+
 ## Backlog (proposed 2026-09-07) — all nine DONE 2026-09-07
 
 Ranked by value. Executed in the suggested order 5, 8, 7, 4, 3, 2, 1, 6, 9, one
@@ -336,6 +345,8 @@ commit per item, gates + reinstall before each commit. Per-item notes inline.
 - Model / cost / context% per row: not in the registry; would need the statusline hook to write a side file.
 - Mouse support: keyboard-first workflow.
 - Fuzzy filter: substring on label + title has been enough.
+- `[colors]` / `[keys]` config tables: deferred on 2026-09-07 when config landed; ANSI
+  palette follows the terminal theme and the key set is small.
 
 ## Retrospective checkpoints
 

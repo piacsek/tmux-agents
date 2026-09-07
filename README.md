@@ -4,27 +4,25 @@
 
 # tmux-agents
 
-A tmux popup that lists the Claude Code sessions running in the current tmux
-server, shows what each one is doing, and jumps to the selected pane. Ships a
-`status` subcommand for the tmux status line and a `cached` subcommand that
-rate-limits other status-line widgets.
+A tmux popup listing the Claude Code sessions in the current server, what each
+is doing, and a jump to its pane. Also a status-line segment and a blocked-alert
+watcher.
 
 ```
-◉ blocked  webapp   permission prompt · Remove PR comments   4m
-● working  dotfiles    Tmux Claude Code session picker          1m
-○ idle     scintilla   ~/projects/scintilla.nvim                3d
+◉ blocked  webapp     permission prompt · Remove PR comments   4m
+● working  dotfiles   Tmux Claude Code session picker          1m
+○ idle     scintilla  ~/projects/scintilla.nvim                3d
 ```
 
-When the popup is at least 100 columns wide the right half previews the
-selected pane (`capture-pane`, refreshed every tick), so a permission prompt or
-question can be read without switching to it.
+Keys: `j/k` move, `1-9` focus row, `/` filter, `Enter` focus, `n` new Claude
+pane, `x` kill (asks `y/n`), `p` toggle preview, `?` help, `q` quit.
 
-A working row whose status has not changed for 30 minutes reads `stale?`, the
-usual sign of a hung session worth killing with `x`.
-
-Keys: `j/k` move, `1-9` focus a row, `/` filter, `Enter` focus pane,
-`n` new Claude pane, `x` kill pane (asks `y/n`), `p` toggle preview, `?` help,
-`q` quit.
+- **Preview**: `p` shows the selected pane's screen on the right (popups ≥ 100
+  columns). Off by default; see `[preview]` below.
+- **Stale**: a working row unchanged for 30 min reads `stale?`.
+- **Status line**: `◉ webapp dotfiles +1 ● 2 ○ 3`, blocked sessions by name.
+- **Watch**: flashes `◉ <session>: <reason>` in every client when a session
+  becomes blocked.
 
 ## Install
 
@@ -32,36 +30,54 @@ Keys: `j/k` move, `1-9` focus a row, `/` filter, `Enter` focus pane,
 cargo install --path . --root ~/.local --locked
 ```
 
-tmux:
+`~/.tmux.conf`:
 
 ```
 bind -n M-c display-popup -E -w 70% -h 60% "tmux-agents"
-set -g status-right " #(tmux-agents status) | #(tmux-agents cached 5 -- git-widget) …"
+set -g status-right " #(tmux-agents status) | #(tmux-agents cached 5 -- my-slow-widget) "
 set-option -g status-interval 1
-```
-
-`tmux-agents watch` is a long-lived process for `run-shell -b` in your tmux
-config. Each second it re-reads the registry and, when a session goes from
-working or idle to blocked, flashes `◉ <session>: <reason>` for 4s in every
-attached client that is not already looking at that pane. Alerts for one
-session are collapsed inside a 3s window, the first poll is a silent baseline,
-one watcher runs per server (pid lock under the cache dir), and it exits when
-the server does.
-
-```
 run-shell -b "tmux-agents watch"
 ```
 
-`tmux-agents cached <ttl-seconds> -- <command> [args...]` runs the command at
-most once per TTL and prints the cached stdout in between, so `status-interval`
-can drop to 1s for the live agents segment while expensive widgets keep their
-old cadence. Cache files live under `$XDG_CACHE_HOME/tmux-agents/`
-(`~/.cache/tmux-agents/` by default), one per distinct argv.
+`cached <ttl-seconds> -- <command>` reruns a widget at most once per TTL so the
+1s interval stays cheap. `watch` runs one instance per server and exits with it.
 
-Sessions are read from Claude Code's own registry at
-`~/.claude/sessions/*.json`; see `AGENTS.md` for the details and caveats.
+## Configure
+
+`~/.config/tmux-agents/config.toml` (or `$XDG_CONFIG_HOME`, or
+`$TMUX_AGENTS_CONFIG`). Every key is optional; `tmux-agents config` prints the
+effective values. Unknown keys are an error.
+
+```toml
+[picker]
+tick_ms = 500
+stale_after_minutes = 30
+
+[preview]
+enabled = false        # p toggles at runtime
+min_width = 100
+split_percent = 50     # list width; preview gets the rest
+
+[status]
+prefix = "#[fg=white]󰙴#[default]"   # "" for none
+named_blocked = 2      # 0 = count only
+
+[watch]
+interval_ms = 1000
+quiet_ms = 3000        # per-session re-alert window
+display_ms = 4000
+skip_active_client = true
+
+[new_pane]
+command = "zsh -ic claude"
+direction = "horizontal"   # or "vertical"
+
+[labels]               # cwd -> name shown instead of the basename
+"~/projects/tmux-agents" = "agents"
+```
 
 ## Develop
 
-`cargo test`, plus `cargo test -- --ignored` for the tests that start a real
-tmux server. See `AGENTS.md`.
+`cargo test`, plus `cargo test -- --ignored` for tests that start a real tmux
+server. Sessions come from Claude Code's registry at `~/.claude/sessions/`.
+Details and gotchas in `AGENTS.md`.
