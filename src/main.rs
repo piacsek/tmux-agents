@@ -7,6 +7,7 @@ use ratatui::crossterm::event::{self, Event};
 use tmux_agents::agents::{Agent, discover};
 use tmux_agents::app::{App, Input, run};
 use tmux_agents::cli::{self, Command};
+use tmux_agents::config::{self, Config};
 use tmux_agents::process::is_alive;
 use tmux_agents::registry::{load, sessions_dir};
 use tmux_agents::status::render;
@@ -16,25 +17,40 @@ const TICK: Duration = Duration::from_millis(500);
 const WATCH_INTERVAL: Duration = Duration::from_secs(1);
 
 fn main() -> ExitCode {
-    match cli::parse(env::args().skip(1)) {
-        Ok(Command::Tui) => match tui() {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(err) => fail(&err.to_string()),
-        },
-        Ok(Command::Status) => match status() {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(err) => fail(&err.to_string()),
-        },
-        Ok(Command::Watch) => match watch() {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(err) => fail(&err.to_string()),
-        },
-        Ok(Command::Cached { ttl, command }) => match cached(ttl, &command) {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(err) => fail(&err.to_string()),
-        },
-        Err(err) => fail(&err),
+    let command = match cli::parse(env::args().skip(1)) {
+        Ok(command) => command,
+        Err(err) => return fail(&err),
+    };
+    let config = match config::load(&config_path()) {
+        Ok(config) => config,
+        Err(err) => return fail(&err.to_string()),
+    };
+    let result = match command {
+        Command::Tui => tui(&config),
+        Command::Status => status(&config),
+        Command::Watch => watch(&config),
+        Command::Config => {
+            print!("{}", config.to_toml());
+            Ok(())
+        }
+        Command::Cached { ttl, command } => cached(ttl, &command),
+    };
+    match result {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(err) => fail(&err.to_string()),
     }
+}
+
+fn config_path() -> PathBuf {
+    config::path(
+        env::var_os("TMUX_AGENTS_CONFIG").map(PathBuf::from),
+        env::var_os("XDG_CONFIG_HOME").map(PathBuf::from),
+        &home(),
+    )
+}
+
+fn home() -> PathBuf {
+    env::var_os("HOME").map(PathBuf::from).unwrap_or_default()
 }
 
 fn fail(message: &str) -> ExitCode {
@@ -42,7 +58,7 @@ fn fail(message: &str) -> ExitCode {
     ExitCode::FAILURE
 }
 
-fn tui() -> std::io::Result<()> {
+fn tui(_config: &Config) -> std::io::Result<()> {
     let tmux = CliTmux::default();
     let mut source = agent_source(&tmux);
     let mut app = App::new(source()?);
@@ -57,14 +73,14 @@ fn tui() -> std::io::Result<()> {
     })
 }
 
-fn status() -> std::io::Result<()> {
+fn status(_config: &Config) -> std::io::Result<()> {
     let tmux = CliTmux::default();
     let agents = agent_source(&tmux)()?;
     println!("{}", render(&agents));
     Ok(())
 }
 
-fn watch() -> std::io::Result<()> {
+fn watch(_config: &Config) -> std::io::Result<()> {
     let lock = cache_dir().join(format!("watch-{}.pid", socket_key()));
     if !tmux_agents::watch::claim(&lock, std::process::id() as i32, &is_alive)? {
         return Ok(());
@@ -111,9 +127,8 @@ fn cached(ttl: Duration, command: &[String]) -> std::io::Result<()> {
 }
 
 fn agent_source(tmux: &CliTmux) -> impl FnMut() -> std::io::Result<Vec<Agent>> + '_ {
-    let home = env::var_os("HOME").map(PathBuf::from).unwrap_or_default();
     let config_dir = env::var_os("CLAUDE_CONFIG_DIR").map(PathBuf::from);
-    let sessions = sessions_dir(config_dir, &home);
+    let sessions = sessions_dir(config_dir, &home());
     move || {
         let panes: Vec<PaneInfo> = tmux.list_panes()?;
         Ok(discover(load(&sessions), &panes, &is_alive, now_ms()))

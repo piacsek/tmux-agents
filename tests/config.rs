@@ -104,3 +104,36 @@ fn the_path_prefers_the_env_override_then_xdg_then_home() {
         PathBuf::from("/home/me/.config/tmux-agents/config.toml")
     );
 }
+
+fn binary(config: &std::path::Path, args: &[&str]) -> std::process::Output {
+    std::process::Command::new(env!("CARGO_BIN_EXE_tmux-agents"))
+        .args(args)
+        .env("TMUX_AGENTS_CONFIG", config)
+        .output()
+        .unwrap()
+}
+
+#[test]
+fn the_binary_prints_the_effective_config_and_rejects_a_broken_file() {
+    let dir = tempfile::tempdir().unwrap();
+
+    let good = write(&dir, "[preview]\nmin_width = 80\n");
+    let out = binary(&good, &["config"]);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let printed: Config = toml::from_str(&String::from_utf8_lossy(&out.stdout)).unwrap();
+    assert_eq!(printed.preview.min_width, 80);
+    assert!(!printed.preview.enabled);
+
+    let bad = write(&dir, "[preview]\nenable = true\n");
+    for args in [&["config"][..], &["status"][..]] {
+        let out = binary(&bad, args);
+        assert!(!out.status.success(), "{args:?} should fail");
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        assert!(stderr.contains("config.toml"), "{stderr}");
+        assert!(stderr.contains("enable"), "{stderr}");
+    }
+}
