@@ -9,11 +9,15 @@ struct Server {
 
 impl Server {
     fn start(name: &str) -> Self {
+        Self::start_with_width(name, "80")
+    }
+
+    fn start_with_width(name: &str, width: &str) -> Self {
         let server = Self {
             socket: format!("tmux-agents-e2e-{name}"),
         };
         let status = server
-            .tmux(&["new-session", "-d", "-s", "live", "-x", "80", "-y", "12"])
+            .tmux(&["new-session", "-d", "-s", "live", "-x", width, "-y", "12"])
             .status()
             .expect("tmux binary on PATH");
         assert!(status.success(), "could not start tmux e2e server");
@@ -75,12 +79,15 @@ impl Drop for Server {
 }
 
 fn fixture_home(server: &Server) -> tempfile::TempDir {
+    fixture_home_for(&server.pane_id())
+}
+
+fn fixture_home_for(pane: &str) -> tempfile::TempDir {
     let home = tempfile::tempdir().unwrap();
     let sessions = home.path().join(".claude/sessions");
     fs::create_dir_all(&sessions).unwrap();
     let project = home.path().join("fixture-project");
     fs::create_dir_all(&project).unwrap();
-    let pane = server.pane_id();
     let pid = std::process::id();
     fs::write(
         sessions.join(format!("{pid}.json")),
@@ -154,4 +161,37 @@ fn status_subcommand_prints_none_when_no_session_is_registered() {
         String::from_utf8_lossy(&out.stdout),
         "#[fg=white]\u{F0674}#[default]  #[dim]none#[default]\n"
     );
+}
+
+#[test]
+#[ignore = "needs a tmux binary; run with --ignored"]
+fn a_wide_binary_previews_the_registered_panes_content() {
+    let server = Server::start_with_width("preview", "140");
+    let picker_pane = server.pane_id();
+    assert!(
+        server
+            .tmux(&["split-window", "-d", "-v", "echo PREVIEW-MARKER; sleep 30"])
+            .status()
+            .unwrap()
+            .success()
+    );
+    let agent_pane = server
+        .tmux(&["list-panes", "-F", "#{pane_id}"])
+        .output()
+        .map(|out| String::from_utf8_lossy(&out.stdout).into_owned())
+        .unwrap()
+        .lines()
+        .find(|id| *id != picker_pane)
+        .unwrap()
+        .to_string();
+    let home = fixture_home_for(&agent_pane);
+
+    server.respawn(
+        &[("HOME", home.path().to_str().unwrap())],
+        env!("CARGO_BIN_EXE_tmux-agents"),
+    );
+    let screen = server.wait_for_screen("PREVIEW-MARKER");
+
+    assert!(screen.contains("> ● working  fixture-project"), "{screen}");
+    assert!(screen.contains("│ PREVIEW-MARKER"), "{screen}");
 }
