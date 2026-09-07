@@ -85,3 +85,7 @@ direction = "horizontal"   # or "vertical"
 `cargo test`, plus `cargo test -- --ignored` for tests that start a real tmux
 server. Sessions come from Claude Code's registry at `~/.claude/sessions/`.
 Details and gotchas in `AGENTS.md`.
+
+## License
+
+MIT.
