@@ -10,6 +10,7 @@ use ratatui::backend::TestBackend;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use tmux_agents::agents::Agent;
 use tmux_agents::app::{App, Input, run};
+use tmux_agents::config::Config;
 use tmux_agents::registry::Status;
 use tmux_agents::tmux::{Client, PaneId, PaneInfo, Tmux};
 
@@ -135,9 +136,13 @@ impl Picker {
     }
 
     pub fn with_size(agents: Vec<Agent>, width: u16, height: u16) -> Self {
+        Self::with_config(agents, width, height, Config::default())
+    }
+
+    pub fn with_config(agents: Vec<Agent>, width: u16, height: u16, config: Config) -> Self {
         Self {
             terminal: Terminal::new(TestBackend::new(width, height)).unwrap(),
-            app: App::new(agents.clone()),
+            app: App::new(agents.clone(), config),
             tmux: FakeTmux::default(),
             source: Rc::new(RefCell::new(agents)),
         }

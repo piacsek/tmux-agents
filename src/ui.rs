@@ -10,7 +10,6 @@ use crate::state::{State, WORD_WIDTH};
 
 const HELP_HINT: &str = "press ? for keybindings";
 const HIGHLIGHT: &str = "> ";
-const PREVIEW_MIN_WIDTH: u16 = 100;
 
 pub fn draw(frame: &mut Frame, app: &mut App) {
     let [body, footer] =
@@ -20,8 +19,8 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     } else if app.agents.is_empty() {
         draw_empty(frame, body);
     } else if let Some(lines) = preview_lines(app, body) {
-        let [list, preview] =
-            Layout::horizontal([Constraint::Percentage(50), Constraint::Fill(1)]).areas(body);
+        let split = Constraint::Percentage(app.config.preview.split_percent);
+        let [list, preview] = Layout::horizontal([split, Constraint::Fill(1)]).areas(body);
         draw_list(frame, list, app);
         draw_preview(frame, preview, &lines);
     } else {
@@ -31,7 +30,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
 }
 
 fn preview_lines(app: &App, body: Rect) -> Option<Vec<String>> {
-    if body.width < PREVIEW_MIN_WIDTH {
+    if body.width < app.config.preview.min_width {
         return None;
     }
     let lines = app.preview.clone()?;

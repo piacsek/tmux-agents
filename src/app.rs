@@ -6,6 +6,7 @@ use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::widgets::ListState;
 
 use crate::agents::Agent;
+use crate::config::Config;
 use crate::tmux::{PaneId, Tmux};
 use crate::ui;
 
@@ -39,18 +40,20 @@ pub struct App {
     pub mode: Mode,
     pub preview: Option<Vec<String>>,
     pub preview_enabled: bool,
+    pub config: Config,
     pending_g: bool,
 }
 
 impl App {
-    pub fn new(agents: Vec<Agent>) -> Self {
+    pub fn new(agents: Vec<Agent>, config: Config) -> Self {
         let list = ListState::default().with_selected(Some(0));
         Self {
             agents,
             list,
             mode: Mode::Normal,
             preview: None,
-            preview_enabled: true,
+            preview_enabled: config.preview.enabled,
+            config,
             pending_g: false,
         }
     }

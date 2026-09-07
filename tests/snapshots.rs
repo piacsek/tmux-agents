@@ -46,7 +46,9 @@ fn empty_layout() {
 
 #[test]
 fn preview_layout() {
-    let mut picker = Picker::with_size(sample(), 120, 8);
+    let mut config = tmux_agents::config::Config::default();
+    config.preview.enabled = true;
+    let mut picker = Picker::with_config(sample(), 120, 8, config);
     picker.tmux.set_capture(
         "%3",
         &[

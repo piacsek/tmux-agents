@@ -58,10 +58,10 @@ fn fail(message: &str) -> ExitCode {
     ExitCode::FAILURE
 }
 
-fn tui(_config: &Config) -> std::io::Result<()> {
+fn tui(config: &Config) -> std::io::Result<()> {
     let tmux = CliTmux::default();
     let mut source = agent_source(&tmux);
-    let mut app = App::new(source()?);
+    let mut app = App::new(source()?, config.clone());
     ratatui::run(|terminal| {
         run(
             terminal,

@@ -185,9 +185,14 @@ fn a_wide_binary_previews_the_registered_panes_content() {
         .unwrap()
         .to_string();
     let home = fixture_home_for(&agent_pane);
+    let config = home.path().join("config.toml");
+    fs::write(&config, "[preview]\nenabled = true\n").unwrap();
 
     server.respawn(
-        &[("HOME", home.path().to_str().unwrap())],
+        &[
+            ("HOME", home.path().to_str().unwrap()),
+            ("TMUX_AGENTS_CONFIG", config.to_str().unwrap()),
+        ],
         env!("CARGO_BIN_EXE_tmux-agents"),
     );
     let screen = server.wait_for_screen("PREVIEW-MARKER");

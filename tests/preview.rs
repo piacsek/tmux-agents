@@ -2,9 +2,21 @@ mod support;
 
 use ratatui::crossterm::event::KeyCode;
 use support::{Picker, agent, key};
+use tmux_agents::config::Config;
+
+fn previewing() -> Config {
+    let mut config = Config::default();
+    config.preview.enabled = true;
+    config
+}
 
 fn wide() -> Picker {
-    let picker = Picker::with_size(vec![agent("dotfiles", "%1"), agent("webapp", "%2")], 120, 8);
+    let picker = Picker::with_config(
+        vec![agent("dotfiles", "%1"), agent("webapp", "%2")],
+        120,
+        8,
+        previewing(),
+    );
     picker.tmux.set_capture("%1", &["$ cargo test", "ok"]);
     picker
         .tmux
@@ -94,7 +106,7 @@ fn a_narrow_popup_never_previews() {
 
 #[test]
 fn the_preview_shows_the_last_lines_and_drops_trailing_blanks() {
-    let mut picker = Picker::with_size(vec![agent("dotfiles", "%1")], 120, 5);
+    let mut picker = Picker::with_config(vec![agent("dotfiles", "%1")], 120, 5, previewing());
     let lines: Vec<String> = (1..=10).map(|i| format!("line {i}")).collect();
     let mut with_blanks: Vec<&str> = lines.iter().map(String::as_str).collect();
     with_blanks.extend(["", "   ", ""]);
@@ -134,4 +146,40 @@ fn a_failed_capture_leaves_the_list_up_without_a_preview() {
     assert!(screen.contains("> ○ idle     webapp"), "{screen}");
     assert!(!screen.contains('│'), "{screen}");
     assert_eq!(picker.tmux.focused().len(), 1);
+}
+
+#[test]
+fn the_preview_is_off_by_default_until_enabled_in_config_or_by_p() {
+    let mut picker = Picker::with_size(vec![agent("dotfiles", "%1")], 120, 8);
+    picker.tmux.set_capture("%1", &["$ cargo test"]);
+
+    picker.run(Vec::new()).unwrap();
+    assert!(
+        !picker.screen().contains("cargo test"),
+        "{}",
+        picker.screen()
+    );
+
+    picker.run(vec![key(KeyCode::Char('p'))]).unwrap();
+    assert!(
+        picker.screen().contains("cargo test"),
+        "{}",
+        picker.screen()
+    );
+}
+
+#[test]
+fn min_width_and_split_percent_come_from_config() {
+    let mut config = previewing();
+    config.preview.min_width = 80;
+    config.preview.split_percent = 30;
+    let mut picker = Picker::with_config(vec![agent("dotfiles", "%1")], 90, 8, config);
+    picker.tmux.set_capture("%1", &["$ cargo test"]);
+
+    picker.run(Vec::new()).unwrap();
+
+    let screen = picker.screen();
+    let first = screen.lines().next().unwrap();
+    assert_eq!(first.chars().nth(27), Some('│'), "{screen}");
+    assert!(first.contains("cargo test"), "{screen}");
 }
