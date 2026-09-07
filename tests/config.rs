@@ -1,0 +1,106 @@
+use tmux_agents::config::{Config, load};
+
+#[test]
+fn a_missing_file_yields_defaults_with_the_preview_off() {
+    let dir = tempfile::tempdir().unwrap();
+
+    let config = load(&dir.path().join("config.toml")).unwrap();
+
+    assert_eq!(config, Config::default());
+    assert!(!config.preview.enabled);
+    assert_eq!(config.preview.min_width, 100);
+    assert_eq!(config.preview.split_percent, 50);
+    assert_eq!(config.picker.tick_ms, 500);
+    assert_eq!(config.picker.stale_after_minutes, 30);
+    assert_eq!(config.status.named_blocked, 2);
+    assert_eq!(config.status.prefix, "#[fg=white]\u{F0674}#[default]");
+    assert_eq!(config.watch.interval_ms, 1000);
+    assert_eq!(config.watch.quiet_ms, 3000);
+    assert_eq!(config.watch.display_ms, 4000);
+    assert!(config.watch.skip_active_client);
+    assert_eq!(config.new_pane.command, "zsh -ic claude");
+    assert_eq!(
+        config.new_pane.direction,
+        tmux_agents::config::Direction::Horizontal
+    );
+    assert!(config.labels.is_empty());
+}
+
+fn write(dir: &tempfile::TempDir, text: &str) -> std::path::PathBuf {
+    let path = dir.path().join("config.toml");
+    std::fs::write(&path, text).unwrap();
+    path
+}
+
+#[test]
+fn a_partial_file_overrides_only_the_keys_it_names() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = write(
+        &dir,
+        "[preview]\nenabled = true\n\n[labels]\n\"/a/b\" = \"bee\"\n",
+    );
+
+    let config = load(&path).unwrap();
+
+    assert!(config.preview.enabled);
+    assert_eq!(config.preview.min_width, 100);
+    assert_eq!(config.picker.tick_ms, 500);
+    assert_eq!(config.labels.get("/a/b").map(String::as_str), Some("bee"));
+}
+
+#[test]
+fn an_unknown_key_or_bad_value_fails_naming_the_file() {
+    let dir = tempfile::tempdir().unwrap();
+
+    let err = load(&write(&dir, "[preview]\nenable = true\n")).unwrap_err();
+    let text = err.to_string();
+    assert!(text.contains("config.toml"), "{text}");
+    assert!(text.contains("enable"), "{text}");
+
+    let err = load(&write(&dir, "[new_pane]\ndirection = \"sideways\"\n")).unwrap_err();
+    assert!(err.to_string().contains("sideways"), "{err}");
+
+    let err = load(&write(&dir, "not toml at all [[[")).unwrap_err();
+    assert!(err.to_string().contains("config.toml"), "{err}");
+}
+
+#[test]
+fn the_effective_config_prints_as_toml_that_loads_back_identically() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut config = Config::default();
+    config.preview.enabled = true;
+    config.new_pane.direction = tmux_agents::config::Direction::Vertical;
+    config.labels.insert("/x".to_string(), "ex".to_string());
+
+    let text = config.to_toml();
+    let reloaded = load(&write(&dir, &text)).unwrap();
+
+    assert_eq!(reloaded, config);
+    assert!(text.contains("[preview]"), "{text}");
+    assert!(text.contains("enabled = true"), "{text}");
+    assert!(text.contains("direction = \"vertical\""), "{text}");
+}
+
+#[test]
+fn the_path_prefers_the_env_override_then_xdg_then_home() {
+    use std::path::{Path, PathBuf};
+    use tmux_agents::config::path;
+    let home = Path::new("/home/me");
+
+    assert_eq!(
+        path(
+            Some(PathBuf::from("/etc/ta.toml")),
+            Some(PathBuf::from("/xdg")),
+            home
+        ),
+        PathBuf::from("/etc/ta.toml")
+    );
+    assert_eq!(
+        path(None, Some(PathBuf::from("/xdg")), home),
+        PathBuf::from("/xdg/tmux-agents/config.toml")
+    );
+    assert_eq!(
+        path(None, None, home),
+        PathBuf::from("/home/me/.config/tmux-agents/config.toml")
+    );
+}
