@@ -12,7 +12,7 @@ rate-limits other status-line widgets.
 ```
 
 Keys: `j/k` move, `1-9` focus a row, `/` filter, `Enter` focus pane,
-`n` new Claude pane, `?` help, `q` quit.
+`n` new Claude pane, `x` kill pane (asks `y/n`), `?` help, `q` quit.
 
 ## Install
 

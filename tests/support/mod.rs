@@ -16,6 +16,7 @@ use tmux_agents::tmux::{PaneId, PaneInfo, Tmux};
 pub struct FakeTmux {
     focused: RefCell<Vec<PaneId>>,
     new_panes: RefCell<usize>,
+    killed: RefCell<Vec<PaneId>>,
 }
 
 impl FakeTmux {
@@ -25,6 +26,10 @@ impl FakeTmux {
 
     pub fn new_panes_requested(&self) -> usize {
         *self.new_panes.borrow()
+    }
+
+    pub fn killed(&self) -> Vec<PaneId> {
+        self.killed.borrow().clone()
     }
 }
 
@@ -40,6 +45,11 @@ impl Tmux for FakeTmux {
 
     fn new_claude_pane(&self) -> io::Result<()> {
         *self.new_panes.borrow_mut() += 1;
+        Ok(())
+    }
+
+    fn kill_pane(&self, pane: &PaneId) -> io::Result<()> {
+        self.killed.borrow_mut().push(pane.clone());
         Ok(())
     }
 }

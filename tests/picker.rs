@@ -557,6 +557,7 @@ fn question_mark_toggles_a_help_view_and_types_while_filtering() {
     assert!(screen.contains("Enter"), "{screen}");
     assert!(screen.contains("focus pane"), "{screen}");
     assert!(screen.contains("new Claude pane"), "{screen}");
+    assert!(screen.contains("kill pane"), "{screen}");
     assert!(!screen.contains("dotfiles"), "{screen}");
 
     picker.run(vec![key(KeyCode::Char('j'))]).unwrap();
@@ -693,4 +694,79 @@ fn untitled_rows_fall_back_to_the_cwd_and_long_titles_get_an_ellipsis() {
         "{screen}"
     );
     assert!(rows[1].trim_end().ends_with("…  1m"), "{screen}");
+}
+
+#[test]
+fn x_asks_for_confirmation_before_killing_the_selected_pane() {
+    let mut picker = Picker::new(vec![agent("dotfiles", "%1"), agent("webapp", "%2")]);
+
+    picker
+        .run(vec![key(KeyCode::Char('j')), key(KeyCode::Char('x'))])
+        .unwrap();
+
+    let screen = picker.screen();
+    assert!(
+        screen
+            .lines()
+            .last()
+            .unwrap()
+            .starts_with("kill webapp? y/n"),
+        "{screen}"
+    );
+    assert!(screen.contains("> ○ idle     webapp"), "{screen}");
+    assert!(picker.tmux.killed().is_empty());
+}
+
+#[test]
+fn y_kills_the_pane_once_and_keeps_the_popup_open() {
+    let mut picker = Picker::new(vec![agent("dotfiles", "%1"), agent("webapp", "%2")]);
+    picker.next_refresh_returns(vec![agent("dotfiles", "%1")]);
+
+    picker
+        .run(vec![
+            key(KeyCode::Char('j')),
+            key(KeyCode::Char('x')),
+            key(KeyCode::Char('y')),
+            key(KeyCode::Char('y')),
+            key(KeyCode::Char('q')),
+        ])
+        .unwrap();
+
+    assert_eq!(picker.tmux.killed(), vec![PaneId("%2".to_string())]);
+    let screen = picker.screen();
+    assert!(!screen.contains("webapp"), "{screen}");
+    assert!(
+        !screen.lines().last().unwrap().starts_with("kill"),
+        "{screen}"
+    );
+}
+
+#[test]
+fn n_and_esc_cancel_the_kill_and_return_to_the_list() {
+    for cancel in [KeyCode::Char('n'), KeyCode::Esc] {
+        let mut picker = Picker::new(vec![agent("dotfiles", "%1")]);
+
+        picker
+            .run(vec![
+                key(KeyCode::Char('x')),
+                key(cancel),
+                key(KeyCode::Char('j')),
+            ])
+            .unwrap();
+
+        assert!(picker.tmux.killed().is_empty());
+        assert_eq!(picker.tmux.new_panes_requested(), 0);
+        let screen = picker.screen();
+        assert!(screen.contains("> ○ idle     dotfiles"), "{screen}");
+        assert!(
+            !screen.lines().last().unwrap().starts_with("kill"),
+            "{screen}"
+        );
+    }
+
+    let mut picker = Picker::new(Vec::new());
+    picker
+        .run(vec![key(KeyCode::Char('x')), key(KeyCode::Char('y'))])
+        .unwrap();
+    assert!(picker.tmux.killed().is_empty());
 }

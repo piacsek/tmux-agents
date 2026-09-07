@@ -33,13 +33,14 @@ fn draw_empty(frame: &mut Frame, area: Rect) {
     frame.render_widget(Paragraph::new(text), area);
 }
 
-const KEYS: [(&str, &str); 8] = [
+const KEYS: [(&str, &str); 9] = [
     ("j/k ↓/↑", "move"),
     ("1-9", "focus row directly"),
     ("gg / G", "first / last"),
     ("/", "filter, Esc clears"),
     ("Enter", "focus pane"),
     ("n", "new Claude pane"),
+    ("x", "kill pane, asks y/n"),
     ("q / Esc", "close"),
     ("?", "toggle this help"),
 ];
@@ -92,6 +93,19 @@ fn draw_footer(frame: &mut Frame, area: Rect, app: &App) {
             frame.render_widget(Paragraph::new(Span::styled(version, dim())), left);
         }
         Mode::Filter(query) => frame.render_widget(Paragraph::new(format!("/{query}")), left),
+        Mode::Confirm(_) => {
+            let label = app
+                .confirming()
+                .map(|agent| agent.label.as_str())
+                .unwrap_or("?");
+            frame.render_widget(
+                Paragraph::new(Span::styled(
+                    format!("kill {label}? y/n"),
+                    Style::default().fg(Color::Red),
+                )),
+                left,
+            );
+        }
         Mode::Normal => {}
     }
     frame.render_widget(

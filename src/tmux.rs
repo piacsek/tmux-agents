@@ -19,6 +19,7 @@ pub trait Tmux {
     fn list_panes(&self) -> io::Result<Vec<PaneInfo>>;
     fn focus(&self, pane: &PaneId) -> io::Result<()>;
     fn new_claude_pane(&self) -> io::Result<()>;
+    fn kill_pane(&self, pane: &PaneId) -> io::Result<()>;
 }
 
 const PANE_FORMAT: &str = "#{pane_id}\t#{session_name}\t#{window_id}\t#{window_index}\t#{pane_current_path}\t#{pane_title}";
@@ -53,6 +54,10 @@ impl CliTmux {
         ])
     }
 
+    pub fn kill_pane_args(&self, pane: &PaneId) -> Vec<String> {
+        self.args(&["kill-pane", "-t", &pane.0])
+    }
+
     fn args(&self, command: &[&str]) -> Vec<String> {
         let mut args = Vec::new();
         if let Some(socket) = &self.socket_name {
@@ -85,6 +90,10 @@ impl Tmux for CliTmux {
 
     fn new_claude_pane(&self) -> io::Result<()> {
         self.run(&self.new_claude_pane_args()).map(drop)
+    }
+
+    fn kill_pane(&self, pane: &PaneId) -> io::Result<()> {
+        self.run(&self.kill_pane_args(pane)).map(drop)
     }
 }
 
@@ -180,6 +189,14 @@ mod tests {
         assert_eq!(
             &scoped.focus_args(&PaneId("%1".to_string()))[..2],
             &["-L", "ci"]
+        );
+    }
+
+    #[test]
+    fn kill_pane_targets_the_given_pane() {
+        assert_eq!(
+            CliTmux::default().kill_pane_args(&PaneId("%7".to_string())),
+            vec!["kill-pane", "-t", "%7"]
         );
     }
 

@@ -22,7 +22,7 @@ src/registry.rs  lenient serde of ~/.claude/sessions/<pid>.json
 src/tmux.rs      Tmux trait, CliTmux (shells out to `tmux`), pane parsing
 src/agents.rs    discover(): join registry × panes × pid liveness → Vec<Agent>, sorted
 src/state.rs     Status → State (glyph, word, ratatui style, tmux style)
-src/app.rs       App state machine (Mode::{Normal, Filter, Help}), run() loop
+src/app.rs       App state machine (Mode::{Normal, Filter, Help, Confirm}), run() loop
 src/ui.rs        rendering; KEYS table drives the help view
 src/status.rs    status-line renderer
 tests/           outside-in tests drive run() with a TestBackend + FakeTmux
@@ -57,6 +57,9 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   target resolves to the client behind the popup; one command switches session,
   window and pane. `command-prompt` does not work from a popup (the prompt shows,
   its command dies with the popup client), which is why `n` uses `split-window`.
+- **`x` is the only destructive key** and always goes through
+  `Mode::Confirm(pane)`; only `y` yields `Action::Kill`, any other key cancels.
+  After `kill-pane` the popup stays open and refreshes so the row disappears.
 - **Title stripping** removes any leading non-alphanumeric glyph plus space
   (Claude uses `✳` and spinner glyphs); a plain hostname title becomes `None`
   and the row falls back to `~/cwd`.

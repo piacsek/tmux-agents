@@ -21,6 +21,7 @@ pub enum Action {
     Quit,
     Focus(PaneId),
     NewClaudePane,
+    Kill(PaneId),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -29,6 +30,7 @@ pub enum Mode {
     Normal,
     Filter(String),
     Help,
+    Confirm(PaneId),
 }
 
 pub struct App {
@@ -86,6 +88,24 @@ impl App {
             }
             Mode::Filter(_) => self.handle_filter_key(key),
             Mode::Normal => self.handle_normal_key(key),
+            Mode::Confirm(_) => self.handle_confirm_key(key),
+        }
+    }
+
+    fn handle_confirm_key(&mut self, key: KeyEvent) -> Action {
+        let Mode::Confirm(pane) = std::mem::take(&mut self.mode) else {
+            return Action::Continue;
+        };
+        match key.code {
+            KeyCode::Char('y') => Action::Kill(pane),
+            _ => Action::Continue,
+        }
+    }
+
+    pub fn confirming(&self) -> Option<&Agent> {
+        match &self.mode {
+            Mode::Confirm(pane) => self.agents.iter().find(|agent| &agent.pane == pane),
+            _ => None,
         }
     }
 
@@ -110,6 +130,11 @@ impl App {
             KeyCode::Char('/') => self.mode = Mode::Filter(String::new()),
             KeyCode::Char('n') => return Action::NewClaudePane,
             KeyCode::Char('?') => self.mode = Mode::Help,
+            KeyCode::Char('x') => {
+                if let Some(agent) = self.selected_agent() {
+                    self.mode = Mode::Confirm(agent.pane.clone());
+                }
+            }
             KeyCode::Char('g') if pending_g => self.list.select_first(),
             KeyCode::Char('g') => self.pending_g = true,
             KeyCode::Enter => {
@@ -196,6 +221,10 @@ where
                 Action::Quit => return Ok(()),
                 Action::Focus(pane) => return tmux.focus(&pane),
                 Action::NewClaudePane => return tmux.new_claude_pane(),
+                Action::Kill(pane) => {
+                    tmux.kill_pane(&pane)?;
+                    app.refresh(source()?);
+                }
                 Action::Continue => {}
             },
         }

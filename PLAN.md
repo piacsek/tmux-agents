@@ -315,7 +315,7 @@ Ranked by value. Suggested order: 5, 8, 7, 4, 3, 2, 1, then decide on 6 and 9.
 
 ### High value
 1. **Preview pane.** Split the popup into list | `capture-pane` of the selected session, refreshed on the tick. Lets you read a blocked session's permission prompt or question without switching. Medium: one new `Tmux` trait method (`capture(pane) -> Vec<String>`), a horizontal layout, a fake in tests, snapshot for the layout. Consider `p` to toggle it and remembering the choice in the session.
-2. **Kill from the popup.** `x` on a row prompts `kill <label>? y/n`, then `kill-pane`. Use case: long-idle sessions. Small, but first destructive action: new `Mode::Confirm(PaneId)`, tests that `n`/Esc do nothing, `y` calls the fake once.
+2. **Kill from the popup.** `x` on a row prompts `kill <label>? y/n`, then `kill-pane`. Use case: long-idle sessions. Small, but first destructive action: new `Mode::Confirm(PaneId)`, tests that `n`/Esc do nothing, `y` calls the fake once. — DONE 2026-09-07 (popup stays open and refreshes after the kill).
 3. **Blocked names in the status line.** When blocked > 0, print `◉ webapp` (cap at two names, then `+n`) instead of `◉ 1`. Small; pure change in `status::render`. — DONE 2026-09-07.
 
 ### Robustness
