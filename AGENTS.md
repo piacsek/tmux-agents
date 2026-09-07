@@ -18,6 +18,7 @@ agents: it runs `<cmd>` at most once per TTL and serves the cached stdout.
 src/main.rs      CLI dispatch, event loop wiring (event::poll → Input::Tick every 500 ms)
 src/cli.rs       `tmux-agents` (TUI) | `status` | `watch` | `config` | `cached <ttl> -- <cmd>`
 src/config.rs    Config (serde + toml), defaults, XDG path resolution, `label_map`
+scripts/homebrew-formula.sh   prints the tap formula for a released version
 src/watch.rs     Watcher (pure transition detector) + run() loop + pid lock for `watch`
 src/cached.rs    TTL cache for status-line widgets; key = hash of argv, freshness = file mtime
 src/registry.rs  lenient serde of ~/.claude/sessions/<pid>.json
@@ -164,6 +165,17 @@ refuses a tag whose version differs from `Cargo.toml`.
 2. Run the gates, commit `Release vX.Y.Z`, push `main`.
 3. `git tag vX.Y.Z && git push origin vX.Y.Z`, then `gh run watch` until the
    `release` workflow is green and `gh release view vX.Y.Z` lists three tarballs.
+4. The `tap` job then regenerates `Formula/tmux-agents.rb` in
+   `github.com/piacsek/homebrew-tap` (local clone: `~/projects/homebrew-tap`) with
+   `scripts/homebrew-formula.sh <version>` and pushes with the `TAP_TOKEN` repo
+   secret (a fine-grained PAT with contents:write on homebrew-tap). If that job
+   fails, run the script by hand and push the tap. `brew install
+   piacsek/tap/tmux-agents` must keep working; check with `brew audit --strict
+   --online --formula piacsek/tap/tmux-agents` after changing the script.
+
+Installed copies: Homebrew puts the release binary in `$(brew --prefix)/bin`,
+`cargo install --path .` puts dev builds in `~/.local/bin`. Keep only one on
+`PATH` while developing or the popup may run the wrong one.
 
 Semver: minor for new keys/subcommands/config, patch for fixes, major on a
 config-format break. Local installs keep using `cargo install --path .`.
