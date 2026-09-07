@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="LOGO.png" alt="tmux-agents: all your Claude Code sessions, right in tmux" width="800">
+</p>
+
 # tmux-agents
 
 A tmux popup that lists the Claude Code sessions running in the current tmux
