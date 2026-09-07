@@ -20,6 +20,8 @@ class TmuxAgents < Formula
   homepage "https://github.com/piacsek/tmux-agents"
   license "MIT"
 
+  depends_on "tmux"
+
   on_macos do
     on_arm do
       url "${base}/tmux-agents-aarch64-apple-darwin.tar.gz"

@@ -26,6 +26,8 @@ pane, `x` kill (asks `y/n`), `p` toggle preview, `?` help, `q` quit.
 
 ## Install
 
+Needs `tmux` on `PATH`; Homebrew installs it as a dependency.
+
 ```sh
 brew install piacsek/tap/tmux-agents
 ```

@@ -104,6 +104,11 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   tempdir. Writes go to a `.tmp<pid>` sibling then `rename`, so a status-line
   tick never reads a half-written file. Trailing newlines are trimmed and
   stderr is discarded, matching the old `scripts/tmux-cached` shell script.
+- **Missing tmux binary.** `CliTmux::run` maps the spawn `NotFound` to
+  `tmux not found on PATH; install tmux (brew install tmux)`; the TUI, `status`
+  and `watch` exit 1 with that line, `config` and `cached` never touch tmux.
+  `tests/missing_tmux.rs` runs the real binary with an empty `PATH`. The tap
+  formula declares `depends_on "tmux"`.
 - **Colors** come from the ANSI palette (idle is `dim` with no fg) so terminal
   themes apply. Do not hardcode hex.
 

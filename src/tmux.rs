@@ -111,7 +111,16 @@ impl CliTmux {
     }
 
     fn run(&self, args: &[String]) -> io::Result<String> {
-        let output = Command::new("tmux").args(args).output()?;
+        let output = Command::new("tmux").args(args).output().map_err(|err| {
+            if err.kind() == io::ErrorKind::NotFound {
+                io::Error::new(
+                    io::ErrorKind::NotFound,
+                    "tmux not found on PATH; install tmux (brew install tmux)",
+                )
+            } else {
+                err
+            }
+        })?;
         if !output.status.success() {
             return Err(io::Error::other(
                 String::from_utf8_lossy(&output.stderr).trim().to_string(),
