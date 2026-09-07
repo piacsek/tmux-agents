@@ -147,7 +147,7 @@ fn row_shows_title_after_label_when_present() {
             .lines()
             .next()
             .unwrap()
-            .starts_with("> ○ idle     dotfiles   Fix the picker"),
+            .starts_with("> ○ idle     dotfiles  Fix the picker"),
         "{screen}"
     );
     assert!(
@@ -155,7 +155,7 @@ fn row_shows_title_after_label_when_present() {
             .lines()
             .nth(1)
             .unwrap()
-            .starts_with("  ○ idle     webapp  "),
+            .starts_with("  ○ idle     webapp    "),
         "{screen}"
     );
 }
@@ -242,8 +242,8 @@ fn slash_filters_rows_by_label_and_shows_the_query() {
     picker
         .run(vec![
             key(KeyCode::Char('/')),
-            key(KeyCode::Char('W')),
-            key(KeyCode::Char('s')),
+            key(KeyCode::Char('A')),
+            key(KeyCode::Char('p')),
         ])
         .unwrap();
 
@@ -255,7 +255,7 @@ fn slash_filters_rows_by_label_and_shows_the_query() {
         .collect();
     assert_eq!(rows.len(), 2, "{screen}");
     assert!(rows[0].starts_with("> ○ idle     webapp  "), "{screen}");
-    assert!(rows[1].starts_with("/Ws"), "{screen}");
+    assert!(rows[1].starts_with("/Ap"), "{screen}");
 }
 
 #[test]

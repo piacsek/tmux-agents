@@ -4,11 +4,7 @@ use ratatui::crossterm::event::KeyCode;
 use support::{Picker, agent, key};
 
 fn wide() -> Picker {
-    let picker = Picker::with_size(
-        vec![agent("dotfiles", "%1"), agent("webapp", "%2")],
-        120,
-        8,
-    );
+    let picker = Picker::with_size(vec![agent("dotfiles", "%1"), agent("webapp", "%2")], 120, 8);
     picker.tmux.set_capture("%1", &["$ cargo test", "ok"]);
     picker
         .tmux

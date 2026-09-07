@@ -2,7 +2,7 @@
 source: tests/snapshots.rs
 expression: picker.screen()
 ---
-> ◉ blocked  webapp       Remove PR comments             │ ● Bash(gh pr comment 42 --delete)                         
+> ◉ blocked  webapp          Remove PR comments             │ ● Bash(gh pr comment 42 --delete)                         
   ● working  dotfiles        Tmux Claude Code session pic…  │                                                           
   ○ idle     scintilla.nvim  ~/scintilla.nvim               │ Allow this command?                                       
                                                             │   1. Yes                                                  
