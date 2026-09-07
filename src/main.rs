@@ -13,8 +13,6 @@ use tmux_agents::registry::{load, sessions_dir};
 use tmux_agents::status::render;
 use tmux_agents::tmux::{CliTmux, PaneInfo, Tmux};
 
-const WATCH_INTERVAL: Duration = Duration::from_secs(1);
-
 fn main() -> ExitCode {
     let command = match cli::parse(env::args().skip(1)) {
         Ok(command) => command,
@@ -80,18 +78,19 @@ fn status(config: &Config) -> std::io::Result<()> {
     Ok(())
 }
 
-fn watch(_config: &Config) -> std::io::Result<()> {
+fn watch(config: &Config) -> std::io::Result<()> {
     let lock = cache_dir().join(format!("watch-{}.pid", socket_key()));
     if !tmux_agents::watch::claim(&lock, std::process::id() as i32, &is_alive)? {
         return Ok(());
     }
     let tmux = CliTmux::default();
     let source = agent_source(&tmux);
-    let ticks = std::iter::from_fn(|| {
-        std::thread::sleep(WATCH_INTERVAL);
+    let interval = Duration::from_millis(config.watch.interval_ms);
+    let ticks = std::iter::from_fn(move || {
+        std::thread::sleep(interval);
         Some(Ok(std::time::Instant::now()))
     });
-    tmux_agents::watch::run(&tmux, source, ticks)
+    tmux_agents::watch::run(&tmux, source, ticks, &config.watch)
 }
 
 fn socket_key() -> String {

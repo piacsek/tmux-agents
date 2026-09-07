@@ -1,6 +1,7 @@
 use std::io;
 use std::path::PathBuf;
 use std::process::Command;
+use std::time::Duration;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PaneId(pub String);
@@ -28,7 +29,7 @@ pub trait Tmux {
     fn kill_pane(&self, pane: &PaneId) -> io::Result<()>;
     fn capture(&self, pane: &PaneId) -> io::Result<Vec<String>>;
     fn clients(&self) -> io::Result<Vec<Client>>;
-    fn display_message(&self, client: &str, text: &str) -> io::Result<()>;
+    fn display_message(&self, client: &str, text: &str, duration: Duration) -> io::Result<()>;
 }
 
 const PANE_FORMAT: &str = "#{pane_id}\t#{session_name}\t#{window_id}\t#{window_index}\t#{pane_current_path}\t#{pane_title}";
@@ -73,8 +74,14 @@ impl CliTmux {
         self.args(&["list-clients", "-F", CLIENT_FORMAT])
     }
 
-    pub fn display_message_args(&self, client: &str, text: &str) -> Vec<String> {
-        self.args(&["display-message", "-d", "4000", "-c", client, text])
+    pub fn display_message_args(
+        &self,
+        client: &str,
+        text: &str,
+        duration: Duration,
+    ) -> Vec<String> {
+        let millis = duration.as_millis().to_string();
+        self.args(&["display-message", "-d", &millis, "-c", client, text])
     }
 
     pub fn capture_args(&self, pane: &PaneId) -> Vec<String> {
@@ -128,8 +135,9 @@ impl Tmux for CliTmux {
         Ok(parse_list_clients(&self.run(&self.list_clients_args())?))
     }
 
-    fn display_message(&self, client: &str, text: &str) -> io::Result<()> {
-        self.run(&self.display_message_args(client, text)).map(drop)
+    fn display_message(&self, client: &str, text: &str, duration: Duration) -> io::Result<()> {
+        self.run(&self.display_message_args(client, text, duration))
+            .map(drop)
     }
 }
 
@@ -262,7 +270,11 @@ mod tests {
             ]
         );
         assert_eq!(
-            tmux.display_message_args("/dev/ttys003", "◉ dotfiles needs input"),
+            tmux.display_message_args(
+                "/dev/ttys003",
+                "◉ dotfiles needs input",
+                Duration::from_millis(4000)
+            ),
             vec![
                 "display-message",
                 "-d",

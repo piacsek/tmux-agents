@@ -5,8 +5,9 @@ use std::path::Path;
 use std::time::{Duration, Instant};
 
 use crate::agents::Agent;
+use crate::config::Watch;
 use crate::state::State;
-use crate::tmux::{PaneId, Tmux};
+use crate::tmux::{Client, PaneId, Tmux};
 
 pub const QUIET: Duration = Duration::from_secs(3);
 
@@ -16,13 +17,27 @@ pub struct Alert {
     pub text: String,
 }
 
-#[derive(Default)]
 pub struct Watcher {
+    quiet: Duration,
     seen: Option<HashMap<i32, State>>,
     alerted_at: HashMap<i32, Instant>,
 }
 
+impl Default for Watcher {
+    fn default() -> Self {
+        Self::new(QUIET)
+    }
+}
+
 impl Watcher {
+    pub fn new(quiet: Duration) -> Self {
+        Self {
+            quiet,
+            seen: None,
+            alerted_at: HashMap::new(),
+        }
+    }
+
     pub fn observe(&mut self, agents: &[Agent], now: Instant) -> Vec<Alert> {
         let current: HashMap<i32, State> = agents
             .iter()
@@ -47,7 +62,7 @@ impl Watcher {
     fn quiet_elapsed(&self, pid: i32, now: Instant) -> bool {
         self.alerted_at
             .get(&pid)
-            .is_none_or(|last| now.duration_since(*last) >= QUIET)
+            .is_none_or(|last| now.duration_since(*last) >= self.quiet)
     }
 }
 
@@ -66,12 +81,14 @@ pub fn run<T, S>(
     tmux: &T,
     mut source: S,
     ticks: impl Iterator<Item = io::Result<Instant>>,
+    config: &Watch,
 ) -> io::Result<()>
 where
     T: Tmux,
     S: FnMut() -> io::Result<Vec<Agent>>,
 {
-    let mut watcher = Watcher::default();
+    let mut watcher = Watcher::new(Duration::from_millis(config.quiet_ms));
+    let duration = Duration::from_millis(config.display_ms);
     for tick in ticks {
         let now = tick?;
         let alerts = watcher.observe(&source()?, now);
@@ -80,8 +97,10 @@ where
         }
         let clients = tmux.clients()?;
         for alert in alerts {
-            for client in clients.iter().filter(|c| c.active_pane != alert.pane) {
-                tmux.display_message(&client.name, &alert.text)?;
+            let looking_away =
+                |client: &&Client| !config.skip_active_client || client.active_pane != alert.pane;
+            for client in clients.iter().filter(looking_away) {
+                tmux.display_message(&client.name, &alert.text, duration)?;
             }
         }
     }

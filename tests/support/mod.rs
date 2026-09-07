@@ -4,6 +4,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io;
 use std::rc::Rc;
+use std::time::Duration;
 
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
@@ -22,7 +23,7 @@ pub struct FakeTmux {
     captures: RefCell<HashMap<PaneId, Vec<String>>>,
     capture_fails: RefCell<bool>,
     clients: RefCell<Vec<Client>>,
-    messages: RefCell<Vec<(String, String)>>,
+    messages: RefCell<Vec<(String, String, u64)>>,
 }
 
 impl FakeTmux {
@@ -52,7 +53,7 @@ impl FakeTmux {
             .collect();
     }
 
-    pub fn messages(&self) -> Vec<(String, String)> {
+    pub fn messages(&self) -> Vec<(String, String, u64)> {
         self.messages.borrow().clone()
     }
 
@@ -88,10 +89,12 @@ impl Tmux for FakeTmux {
         Ok(self.clients.borrow().clone())
     }
 
-    fn display_message(&self, client: &str, text: &str) -> io::Result<()> {
-        self.messages
-            .borrow_mut()
-            .push((client.to_string(), text.to_string()));
+    fn display_message(&self, client: &str, text: &str, duration: Duration) -> io::Result<()> {
+        self.messages.borrow_mut().push((
+            client.to_string(),
+            text.to_string(),
+            duration.as_millis() as u64,
+        ));
         Ok(())
     }
 

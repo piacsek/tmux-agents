@@ -3,6 +3,7 @@ mod support;
 use std::time::{Duration, Instant};
 
 use support::{agent, agent_with_status};
+use tmux_agents::config::Watch;
 use tmux_agents::registry::Status;
 use tmux_agents::tmux::PaneId;
 use tmux_agents::watch::{Alert, Watcher};
@@ -107,14 +108,64 @@ fn the_loop_notifies_every_client_not_already_looking_at_the_blocked_pane() {
     let t0 = Instant::now();
     let ticks = [at(t0, 0), at(t0, 1)].into_iter().map(Ok);
 
-    tmux_agents::watch::run(&tmux, || Ok(rounds.next().unwrap_or_default()), ticks).unwrap();
+    tmux_agents::watch::run(
+        &tmux,
+        || Ok(rounds.next().unwrap_or_default()),
+        ticks,
+        &Watch::default(),
+    )
+    .unwrap();
 
     assert_eq!(
         tmux.messages(),
         vec![(
             "/dev/ttys003".to_string(),
-            "◉ dotfiles: permission prompt".to_string()
+            "◉ dotfiles: permission prompt".to_string(),
+            4000
         )]
+    );
+}
+
+#[test]
+fn the_loop_can_notify_every_client_with_a_configured_duration_and_quiet_window() {
+    let tmux = support::FakeTmux::default();
+    tmux.set_clients(&[("/dev/ttys003", "%1"), ("/dev/ttys009", "%2")]);
+    let busy = pid(agent_with_status("dotfiles", "%2", Status::Busy), 2);
+    let mut blocked = busy.clone();
+    blocked.status = Status::Waiting;
+    let mut rounds = vec![
+        vec![busy.clone()],
+        vec![blocked.clone()],
+        vec![busy],
+        vec![blocked],
+    ]
+    .into_iter();
+    let t0 = Instant::now();
+    let ticks = [at(t0, 0), at(t0, 1), at(t0, 2), at(t0, 3)]
+        .into_iter()
+        .map(Ok);
+    let config = Watch {
+        quiet_ms: 10_000,
+        display_ms: 1500,
+        skip_active_client: false,
+        ..Watch::default()
+    };
+
+    tmux_agents::watch::run(
+        &tmux,
+        || Ok(rounds.next().unwrap_or_default()),
+        ticks,
+        &config,
+    )
+    .unwrap();
+
+    let text = "◉ dotfiles needs input".to_string();
+    assert_eq!(
+        tmux.messages(),
+        vec![
+            ("/dev/ttys003".to_string(), text.clone(), 1500),
+            ("/dev/ttys009".to_string(), text, 1500),
+        ]
     );
 }
 
