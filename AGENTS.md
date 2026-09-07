@@ -154,7 +154,9 @@ one flat tarball per target (`tmux-agents-<target>.tar.gz` holding just the
 binary; targets `aarch64-apple-darwin`, `x86_64-apple-darwin`,
 `x86_64-unknown-linux-gnu`) plus `.sha256`, with generated notes. Asset names
 carry no version so the README's `releases/latest/download/` one-liner stays
-valid; do not rename them. The workflow
+valid; do not rename them. Both macOS targets build on `macos-latest` (the Intel
+one cross-compiled); the `macos-13` runner label is retired and a job asking for
+it queues forever. The workflow
 refuses a tag whose version differs from `Cargo.toml`.
 
 1. Bump `version` in `Cargo.toml` (`Cargo.lock` follows on the next build) and
