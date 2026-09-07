@@ -237,3 +237,27 @@ fn waiting_for_is_carried_onto_the_agent() {
 
     assert_eq!(agents[0].waiting_for.as_deref(), Some("input needed"));
 }
+
+#[test]
+fn within_the_blocked_group_the_oldest_prompt_comes_first() {
+    let panes = vec![
+        pane("%1", "a", 1, ""),
+        pane("%2", "a", 2, ""),
+        pane("%3", "b", 1, ""),
+    ];
+    let mut recent = record(1, "/recent", Some("a:@1.%1"));
+    recent.status = Status::Waiting;
+    recent.status_updated_at = Some(NOW - 60_000);
+    let mut undated = record(2, "/undated", Some("a:@2.%2"));
+    undated.status = Status::Waiting;
+    let mut old = record(3, "/old", Some("b:@3.%3"));
+    old.status = Status::Waiting;
+    old.status_updated_at = Some(NOW - 600_000);
+
+    let labels: Vec<String> = discover(vec![recent, undated, old], &panes, &alive, NOW)
+        .into_iter()
+        .map(|a| a.label)
+        .collect();
+
+    assert_eq!(labels, vec!["old", "recent", "undated"]);
+}

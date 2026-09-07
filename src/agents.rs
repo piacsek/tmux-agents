@@ -1,3 +1,4 @@
+use std::cmp::Reverse;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -51,12 +52,13 @@ pub fn discover(
     agents
 }
 
-fn sort_key(agent: &Agent) -> (State, &str, u32) {
-    (
-        State::from(agent.status),
-        &agent.session,
-        agent.window_index,
-    )
+fn sort_key(agent: &Agent) -> (State, Reverse<Option<Duration>>, &str, u32) {
+    let state = State::from(agent.status);
+    let neglect = match state {
+        State::Blocked => Reverse(agent.status_age),
+        _ => Reverse(None),
+    };
+    (state, neglect, &agent.session, agent.window_index)
 }
 
 fn summary(title: &str) -> Option<String> {

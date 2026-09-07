@@ -324,7 +324,7 @@ Ranked by value. Suggested order: 5, 8, 7, 4, 3, 2, 1, then decide on 6 and 9.
 6. **Stale-busy detection.** A hung Claude process leaves `busy` forever. Dim a row `busy` for more than ~30 min, or show `busy?`. Small; needs a threshold constant and a test with a fixed `now`.
 
 ### Polish
-7. **Oldest blocked first.** Within the blocked group sort by age descending so the most neglected prompt is row 1 and `M-c 1` goes there. Trivial change to `sort_key`; note the stable-order merge means it only affects the initial order.
+7. **Oldest blocked first.** Within the blocked group sort by age descending so the most neglected prompt is row 1 and `M-c 1` goes there. Trivial change to `sort_key`; note the stable-order merge means it only affects the initial order. — DONE 2026-09-07 (undated blocked rows sort after dated ones).
 8. **Version 0.2.0.** Help footer shows `v0.1.0` while the feature set has doubled. Trivial. — DONE 2026-09-07.
 
 ### Bigger, discuss first
