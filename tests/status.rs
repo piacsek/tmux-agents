@@ -26,7 +26,7 @@ fn states_are_ordered_blocked_working_idle_and_blocked_is_bold() {
 
     assert_eq!(
         render(&agents),
-        "#[fg=white]󰙴#[default]  #[fg=red,bold]◉ 1#[default] #[fg=yellow]● 2#[default] #[dim]○ 2#[default]"
+        "#[fg=white]󰙴#[default]  #[fg=red,bold]◉ c#[default] #[fg=yellow]● 2#[default] #[dim]○ 2#[default]"
     );
 }
 
@@ -51,5 +51,25 @@ fn unknown_status_is_a_grey_hollow_dot_after_idle() {
     assert_eq!(
         render(&agents),
         "#[fg=white]󰙴#[default]  #[dim]○ 1#[default] #[fg=brightblack]○ 1#[default]"
+    );
+}
+
+#[test]
+fn blocked_segment_names_the_sessions_capped_at_two_then_a_count() {
+    let one = vec![agent_with_status("webapp", "%1", Status::Waiting)];
+    assert_eq!(
+        render(&one),
+        "#[fg=white]󰙴#[default]  #[fg=red,bold]◉ webapp#[default]"
+    );
+
+    let three = vec![
+        agent_with_status("webapp", "%1", Status::Waiting),
+        agent_with_status("dotfiles", "%2", Status::Waiting),
+        agent_with_status("api", "%3", Status::Waiting),
+        agent_with_status("idle", "%4", Status::Idle),
+    ];
+    assert_eq!(
+        render(&three),
+        "#[fg=white]󰙴#[default]  #[fg=red,bold]◉ webapp dotfiles +1#[default] #[dim]○ 1#[default]"
     );
 }

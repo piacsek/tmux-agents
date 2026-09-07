@@ -61,7 +61,9 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   (Claude uses `✳` and spinner glyphs); a plain hostname title becomes `None`
   and the row falls back to `~/cwd`.
 - **Status-line output is tmux markup**, never ANSI. Zero sessions prints
-  `none` so a config-level separator never dangles.
+  `none` so a config-level separator never dangles. The blocked segment names
+  the sessions (`◉ webapp dotfiles +1`, two names then `+n`, oldest prompt
+  first) while working and idle stay counts.
 - **`cached` stamps the cache file's mtime with the caller's `now`** and reads
   freshness from that mtime, so tests drive it with a fixed clock and a
   tempdir. Writes go to a `.tmp<pid>` sibling then `rename`, so a status-line
