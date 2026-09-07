@@ -213,6 +213,7 @@ fn watch_holds_a_single_lock_and_exits_when_the_server_dies() {
             .env("HOME", home.path())
             .env("XDG_CACHE_HOME", home.path().join("cache"))
             .env("TMUX", &tmux_env)
+            .stderr(std::process::Stdio::piped())
             .spawn()
             .unwrap()
     };
@@ -230,8 +231,13 @@ fn watch_holds_a_single_lock_and_exits_when_the_server_dies() {
         first.id().to_string()
     );
 
-    let second = spawn().wait().unwrap();
-    assert!(second.success());
+    let second = spawn().wait_with_output().unwrap();
+    assert!(second.status.success());
+    let stderr = String::from_utf8_lossy(&second.stderr);
+    assert!(
+        stderr.contains(&format!("watch already running (pid {})", first.id())),
+        "{stderr}"
+    );
     assert!(
         first.try_wait().unwrap().is_none(),
         "first watcher exited early"
@@ -245,5 +251,10 @@ fn watch_holds_a_single_lock_and_exits_when_the_server_dies() {
     assert!(
         first.try_wait().unwrap().is_some(),
         "watcher outlived the server"
+    );
+    assert!(
+        !locks[0].path().exists(),
+        "lock left behind: {}",
+        locks[0].path().display()
     );
 }

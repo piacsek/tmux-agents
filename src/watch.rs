@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use crate::agents::Agent;
@@ -108,16 +108,31 @@ where
     Ok(())
 }
 
-pub fn claim(lock: &Path, pid: i32, alive: &dyn Fn(i32) -> bool) -> io::Result<bool> {
+#[derive(Debug)]
+pub enum Claim {
+    Acquired(Lock),
+    HeldBy(i32),
+}
+
+#[derive(Debug)]
+pub struct Lock(PathBuf);
+
+impl Drop for Lock {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.0);
+    }
+}
+
+pub fn claim(lock: &Path, pid: i32, alive: &dyn Fn(i32) -> bool) -> io::Result<Claim> {
     let holder = fs::read_to_string(lock)
         .ok()
         .and_then(|text| text.trim().parse::<i32>().ok());
-    if holder.is_some_and(|holder| holder != pid && alive(holder)) {
-        return Ok(false);
+    if let Some(holder) = holder.filter(|holder| *holder != pid && alive(*holder)) {
+        return Ok(Claim::HeldBy(holder));
     }
     if let Some(dir) = lock.parent() {
         crate::cached::private_dir(dir)?;
     }
     fs::write(lock, format!("{pid}\n"))?;
-    Ok(true)
+    Ok(Claim::Acquired(Lock(lock.to_path_buf())))
 }

@@ -12,6 +12,7 @@ use tmux_agents::process::is_alive;
 use tmux_agents::registry::{load, sessions_dir};
 use tmux_agents::status::render;
 use tmux_agents::tmux::{CliTmux, PaneInfo, Tmux};
+use tmux_agents::watch::Claim;
 
 fn main() -> ExitCode {
     let command = match cli::parse(env::args().skip(1)) {
@@ -80,9 +81,13 @@ fn status(config: &Config) -> std::io::Result<()> {
 
 fn watch(config: &Config) -> std::io::Result<()> {
     let lock = cache_dir().join(format!("watch-{}.pid", socket_key()));
-    if !tmux_agents::watch::claim(&lock, std::process::id() as i32, &is_alive)? {
-        return Ok(());
-    }
+    let _lock = match tmux_agents::watch::claim(&lock, std::process::id() as i32, &is_alive)? {
+        Claim::Acquired(lock) => lock,
+        Claim::HeldBy(holder) => {
+            eprintln!("tmux-agents: watch already running (pid {holder})");
+            return Ok(());
+        }
+    };
     let tmux = CliTmux::default();
     let source = agent_source(&tmux, config);
     let interval = Duration::from_millis(config.watch.interval_ms);

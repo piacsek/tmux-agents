@@ -101,7 +101,9 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   `display-message -d 4000 -c <client>`. The loop returns the first tmux error,
   which is how it dies with the server. `watch::claim` writes a pid lock at
   `~/.cache/tmux-agents/watch-<hash of $TMUX socket>.pid`; a live holder makes
-  a second `watch` exit 0 immediately, so re-sourcing the config is safe.
+  a second `watch` print `watch already running (pid N)` to stderr and exit 0,
+  so re-sourcing the config is safe. `Claim::Acquired` carries a `Lock` guard
+  that removes the file when `run` returns, so a dead server leaves no lock.
 - **`cached` stamps the cache file's mtime with the caller's `now`** and reads
   freshness from that mtime, so tests drive it with a fixed clock and a
   tempdir. Writes go to a `.tmp<pid>` sibling then `rename`, so a status-line

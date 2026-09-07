@@ -6,7 +6,7 @@ use support::{agent, agent_with_status};
 use tmux_agents::config::Watch;
 use tmux_agents::registry::Status;
 use tmux_agents::tmux::PaneId;
-use tmux_agents::watch::{Alert, Watcher};
+use tmux_agents::watch::{Alert, Claim, Watcher, claim};
 
 fn at(t0: Instant, secs: u64) -> Instant {
     t0 + Duration::from_secs(secs)
@@ -175,17 +175,27 @@ fn the_pid_lock_is_claimed_unless_a_live_watcher_holds_it() {
     let lock = dir.path().join("watch.pid");
     let alive = |pid: i32| pid == 100;
 
-    assert!(tmux_agents::watch::claim(&lock, 100, &alive).unwrap());
+    let held = claim(&lock, 100, &alive).unwrap();
+    assert!(matches!(held, Claim::Acquired(_)));
     assert_eq!(std::fs::read_to_string(&lock).unwrap().trim(), "100");
-    assert!(!tmux_agents::watch::claim(&lock, 200, &alive).unwrap());
+    assert!(matches!(
+        claim(&lock, 200, &alive).unwrap(),
+        Claim::HeldBy(100)
+    ));
     assert_eq!(std::fs::read_to_string(&lock).unwrap().trim(), "100");
 
     std::fs::write(&lock, "999\n").unwrap();
-    assert!(tmux_agents::watch::claim(&lock, 200, &alive).unwrap());
+    let taken = claim(&lock, 200, &alive).unwrap();
+    assert!(matches!(taken, Claim::Acquired(_)));
     assert_eq!(std::fs::read_to_string(&lock).unwrap().trim(), "200");
+    drop(taken);
+    assert!(!lock.exists(), "dropping the claim releases the lock");
 
     std::fs::write(&lock, "garbage").unwrap();
-    assert!(tmux_agents::watch::claim(&lock, 300, &alive).unwrap());
+    assert!(matches!(
+        claim(&lock, 300, &alive).unwrap(),
+        Claim::Acquired(_)
+    ));
 }
 
 #[test]
