@@ -1,13 +1,8 @@
-use nix::errno::Errno;
 use nix::sys::signal::kill;
 use nix::unistd::Pid;
 
 pub fn is_alive(pid: i32) -> bool {
-    match kill(Pid::from_raw(pid), None) {
-        Ok(()) => true,
-        Err(Errno::EPERM) => true,
-        Err(_) => false,
-    }
+    kill(Pid::from_raw(pid), None).is_ok()
 }
 
 #[cfg(test)]
@@ -23,5 +18,10 @@ mod tests {
         child.wait().unwrap();
 
         assert!(!is_alive(pid));
+    }
+
+    #[test]
+    fn another_users_process_is_not_one_of_ours() {
+        assert!(!is_alive(1));
     }
 }

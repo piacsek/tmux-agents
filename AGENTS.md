@@ -41,7 +41,9 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
 (`<session>:@<window>.%<pane>`, absent outside tmux). Honors `CLAUDE_CONFIG_DIR`.
 
 - Parse leniently: unknown fields ignored, unknown enum values → `Unknown`.
-- Filter by `kill(pid, 0)` (EPERM counts as alive) and by pane existence.
+- Filter by `kill(pid, 0)` and by pane existence. EPERM counts as dead: a pid we
+  cannot signal belongs to another user, so it is neither a Claude session of
+  ours nor a `watch` holder (a recycled pid must not block `watch` forever).
 - `tests/registry.rs` carries a verbatim sample; refresh it when the format changes.
 - `waiting` is set for permission dialogs, AskUserQuestion/elicitation, sandbox
   and worker requests, and local command dialogs. `shell` has no known writer;
