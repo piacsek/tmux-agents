@@ -25,8 +25,31 @@ pub fn run(
     let output = run.stdout.trim_end_matches('\n').to_string();
     if run.ok {
         store(&file, &output, now)?;
+        prune(cache_dir, now);
     }
     Ok(output)
+}
+
+const KEEP: Duration = Duration::from_secs(86_400);
+
+fn prune(cache_dir: &Path, now: SystemTime) {
+    let Ok(entries) = fs::read_dir(cache_dir) else {
+        return;
+    };
+    for path in entries.flatten().map(|entry| entry.path()) {
+        let is_entry = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.len() == 16 && name.chars().all(|c| c.is_ascii_hexdigit()));
+        let expired = fs::metadata(&path)
+            .and_then(|meta| meta.modified())
+            .ok()
+            .and_then(|modified| now.duration_since(modified).ok())
+            .is_some_and(|age| age > KEEP);
+        if is_entry && expired {
+            let _ = fs::remove_file(&path);
+        }
+    }
 }
 
 fn fresh(file: &Path, ttl: Duration, now: SystemTime) -> Option<String> {

@@ -130,7 +130,9 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   tick never reads a half-written file. Trailing newlines are trimmed and
   stderr is discarded, matching the old `scripts/tmux-cached` shell script. A
   non-zero exit is printed but not stored, so a transient failure is retried on
-  the next tick instead of being served for a whole TTL. `cached::private_dir`
+  the next tick instead of being served for a whole TTL. Every successful
+  store also prunes sibling entries (16-hex names only, never `watch-*.pid`)
+  whose mtime is older than a day, so per-path widgets do not pile up files. `cached::private_dir`
   creates `~/.cache/tmux-agents` as 0700 (and re-tightens an existing dir);
   `watch::claim` uses the same helper for the lock.
 - **Missing tmux binary.** `CliTmux::run` maps the spawn `NotFound` to

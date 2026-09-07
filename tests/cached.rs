@@ -219,3 +219,34 @@ fn a_failed_command_is_returned_but_never_cached() {
     assert_eq!(second, "fatal: not a repo");
     assert_eq!(calls, 2);
 }
+
+#[test]
+fn a_cache_miss_prunes_entries_older_than_a_day_but_not_watch_locks() {
+    let dir = tempfile::tempdir().unwrap();
+    let two_days_ago = epoch(1_000_000 - 2 * 86_400);
+    let stale = dir.path().join("0123456789abcdef");
+    let recent = dir.path().join("fedcba9876543210");
+    let lock = dir.path().join("watch-0123456789abcdef.pid");
+    for (path, when) in [
+        (&stale, two_days_ago),
+        (&recent, epoch(999_000)),
+        (&lock, two_days_ago),
+    ] {
+        let file = std::fs::File::create(path).unwrap();
+        file.set_modified(when).unwrap();
+    }
+    let widget = Counting::new("out\n");
+
+    run(
+        dir.path(),
+        TTL,
+        &argv(&["git", "status"]),
+        epoch(1_000_000),
+        &mut widget.runner(),
+    )
+    .unwrap();
+
+    assert!(!stale.exists(), "stale entry kept");
+    assert!(recent.exists(), "recent entry pruned");
+    assert!(lock.exists(), "watch lock pruned");
+}
