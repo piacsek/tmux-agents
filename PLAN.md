@@ -328,7 +328,7 @@ Ranked by value. Suggested order: 5, 8, 7, 4, 3, 2, 1, then decide on 6 and 9.
 8. **Version 0.2.0.** Help footer shows `v0.1.0` while the feature set has doubled. Trivial. — DONE 2026-09-07.
 
 ### Bigger, discuss first
-9. **Proactive alert.** `tmux-agents watch`: long-lived process that runs `tmux display-message "◉ dotfiles needs input"` on the idle/busy → blocked transition. Needs a launcher (launchd, or `run-shell -b` at tmux start), debouncing, and a decision on whether the status line already covers it. Only worth it if prompts are being missed today.
+9. **Proactive alert.** `tmux-agents watch`: long-lived process that runs `tmux display-message "◉ dotfiles needs input"` on the idle/busy → blocked transition. Needs a launcher (launchd, or `run-shell -b` at tmux start), debouncing, and a decision on whether the status line already covers it. Only worth it if prompts are being missed today. — DONE 2026-09-07. Decisions: launcher is `run-shell -b "tmux-agents watch"` in `.tmux.conf` (no launchd); one watcher per server via a pid lock; the watcher exits with the server; debounce is a 3s per-pid quiet window plus a silent first poll; clients already on the blocked pane are skipped. The status line (item 3) shows *who* is blocked, the watcher adds *when* it happened.
 
 ### Considered and dropped
 - `session:window` column: added and removed the same day, read as noise.

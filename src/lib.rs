@@ -8,3 +8,4 @@ pub mod state;
 pub mod status;
 pub mod tmux;
 pub mod ui;
+pub mod watch;

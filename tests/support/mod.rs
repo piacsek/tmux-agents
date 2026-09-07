@@ -11,7 +11,7 @@ use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use tmux_agents::agents::Agent;
 use tmux_agents::app::{App, Input, run};
 use tmux_agents::registry::Status;
-use tmux_agents::tmux::{PaneId, PaneInfo, Tmux};
+use tmux_agents::tmux::{Client, PaneId, PaneInfo, Tmux};
 
 #[derive(Default)]
 pub struct FakeTmux {
@@ -20,6 +20,8 @@ pub struct FakeTmux {
     killed: RefCell<Vec<PaneId>>,
     captures: RefCell<HashMap<PaneId, Vec<String>>>,
     capture_fails: RefCell<bool>,
+    clients: RefCell<Vec<Client>>,
+    messages: RefCell<Vec<(String, String)>>,
 }
 
 impl FakeTmux {
@@ -37,6 +39,20 @@ impl FakeTmux {
 
     pub fn fail_captures(&self) {
         *self.capture_fails.borrow_mut() = true;
+    }
+
+    pub fn set_clients(&self, clients: &[(&str, &str)]) {
+        *self.clients.borrow_mut() = clients
+            .iter()
+            .map(|(name, pane)| Client {
+                name: name.to_string(),
+                active_pane: PaneId(pane.to_string()),
+            })
+            .collect();
+    }
+
+    pub fn messages(&self) -> Vec<(String, String)> {
+        self.messages.borrow().clone()
     }
 
     pub fn set_capture(&self, pane: &str, lines: &[&str]) {
@@ -64,6 +80,17 @@ impl Tmux for FakeTmux {
 
     fn kill_pane(&self, pane: &PaneId) -> io::Result<()> {
         self.killed.borrow_mut().push(pane.clone());
+        Ok(())
+    }
+
+    fn clients(&self) -> io::Result<Vec<Client>> {
+        Ok(self.clients.borrow().clone())
+    }
+
+    fn display_message(&self, client: &str, text: &str) -> io::Result<()> {
+        self.messages
+            .borrow_mut()
+            .push((client.to_string(), text.to_string()));
         Ok(())
     }
 

@@ -15,15 +15,25 @@ pub struct PaneInfo {
     pub title: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Client {
+    pub name: String,
+    pub active_pane: PaneId,
+}
+
 pub trait Tmux {
     fn list_panes(&self) -> io::Result<Vec<PaneInfo>>;
     fn focus(&self, pane: &PaneId) -> io::Result<()>;
     fn new_claude_pane(&self) -> io::Result<()>;
     fn kill_pane(&self, pane: &PaneId) -> io::Result<()>;
     fn capture(&self, pane: &PaneId) -> io::Result<Vec<String>>;
+    fn clients(&self) -> io::Result<Vec<Client>>;
+    fn display_message(&self, client: &str, text: &str) -> io::Result<()>;
 }
 
 const PANE_FORMAT: &str = "#{pane_id}\t#{session_name}\t#{window_id}\t#{window_index}\t#{pane_current_path}\t#{pane_title}";
+
+const CLIENT_FORMAT: &str = "#{client_name}\t#{pane_id}";
 
 #[derive(Debug, Default, Clone)]
 pub struct CliTmux {
@@ -57,6 +67,14 @@ impl CliTmux {
 
     pub fn kill_pane_args(&self, pane: &PaneId) -> Vec<String> {
         self.args(&["kill-pane", "-t", &pane.0])
+    }
+
+    pub fn list_clients_args(&self) -> Vec<String> {
+        self.args(&["list-clients", "-F", CLIENT_FORMAT])
+    }
+
+    pub fn display_message_args(&self, client: &str, text: &str) -> Vec<String> {
+        self.args(&["display-message", "-d", "4000", "-c", client, text])
     }
 
     pub fn capture_args(&self, pane: &PaneId) -> Vec<String> {
@@ -105,6 +123,27 @@ impl Tmux for CliTmux {
         let stdout = self.run(&self.capture_args(pane))?;
         Ok(stdout.lines().map(str::to_string).collect())
     }
+
+    fn clients(&self) -> io::Result<Vec<Client>> {
+        Ok(parse_list_clients(&self.run(&self.list_clients_args())?))
+    }
+
+    fn display_message(&self, client: &str, text: &str) -> io::Result<()> {
+        self.run(&self.display_message_args(client, text)).map(drop)
+    }
+}
+
+pub fn parse_list_clients(stdout: &str) -> Vec<Client> {
+    stdout
+        .lines()
+        .filter_map(|line| {
+            let (name, pane) = line.split_once('\t')?;
+            Some(Client {
+                name: name.to_string(),
+                active_pane: PaneId(pane.to_string()),
+            })
+        })
+        .collect()
 }
 
 pub fn parse_pane_ref(s: &str) -> Option<PaneId> {
@@ -199,6 +238,39 @@ mod tests {
         assert_eq!(
             &scoped.focus_args(&PaneId("%1".to_string()))[..2],
             &["-L", "ci"]
+        );
+    }
+
+    #[test]
+    fn list_clients_reports_each_clients_active_pane_and_display_message_targets_one() {
+        let tmux = CliTmux::default();
+        assert_eq!(
+            tmux.list_clients_args(),
+            vec!["list-clients", "-F", "#{client_name}\t#{pane_id}"]
+        );
+        assert_eq!(
+            parse_list_clients("/dev/ttys003\t%53\n/dev/ttys009\t%2\n"),
+            vec![
+                Client {
+                    name: "/dev/ttys003".to_string(),
+                    active_pane: PaneId("%53".to_string()),
+                },
+                Client {
+                    name: "/dev/ttys009".to_string(),
+                    active_pane: PaneId("%2".to_string()),
+                },
+            ]
+        );
+        assert_eq!(
+            tmux.display_message_args("/dev/ttys003", "◉ dotfiles needs input"),
+            vec![
+                "display-message",
+                "-d",
+                "4000",
+                "-c",
+                "/dev/ttys003",
+                "◉ dotfiles needs input"
+            ]
         );
     }
 

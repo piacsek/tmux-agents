@@ -36,6 +36,18 @@ set -g status-right " #(tmux-agents status) | #(tmux-agents cached 5 -- git-widg
 set-option -g status-interval 1
 ```
 
+`tmux-agents watch` is a long-lived process for `run-shell -b` in your tmux
+config. Each second it re-reads the registry and, when a session goes from
+working or idle to blocked, flashes `◉ <session>: <reason>` for 4s in every
+attached client that is not already looking at that pane. Alerts for one
+session are collapsed inside a 3s window, the first poll is a silent baseline,
+one watcher runs per server (pid lock under the cache dir), and it exits when
+the server does.
+
+```
+run-shell -b "tmux-agents watch"
+```
+
 `tmux-agents cached <ttl-seconds> -- <command> [args...]` runs the command at
 most once per TTL and prints the cached stdout in between, so `status-interval`
 can drop to 1s for the live agents segment while expensive widgets keep their

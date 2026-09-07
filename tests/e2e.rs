@@ -195,3 +195,50 @@ fn a_wide_binary_previews_the_registered_panes_content() {
     assert!(screen.contains("> ● working  fixture-project"), "{screen}");
     assert!(screen.contains("│ PREVIEW-MARKER"), "{screen}");
 }
+
+#[test]
+#[ignore = "needs a tmux binary; run with --ignored"]
+fn watch_holds_a_single_lock_and_exits_when_the_server_dies() {
+    let server = Server::start("watch");
+    let home = fixture_home(&server);
+    let tmux_env = format!("{},0,0", server.socket_path());
+    let spawn = || {
+        Command::new(env!("CARGO_BIN_EXE_tmux-agents"))
+            .arg("watch")
+            .env("HOME", home.path())
+            .env("XDG_CACHE_HOME", home.path().join("cache"))
+            .env("TMUX", &tmux_env)
+            .spawn()
+            .unwrap()
+    };
+
+    let mut first = spawn();
+    let lock_dir = home.path().join("cache/tmux-agents");
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while Instant::now() < deadline && !lock_dir.exists() {
+        sleep(Duration::from_millis(50));
+    }
+    let locks: Vec<_> = fs::read_dir(&lock_dir).unwrap().flatten().collect();
+    assert_eq!(locks.len(), 1, "{locks:?}");
+    assert_eq!(
+        fs::read_to_string(locks[0].path()).unwrap().trim(),
+        first.id().to_string()
+    );
+
+    let second = spawn().wait().unwrap();
+    assert!(second.success());
+    assert!(
+        first.try_wait().unwrap().is_none(),
+        "first watcher exited early"
+    );
+
+    drop(server);
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while Instant::now() < deadline && first.try_wait().unwrap().is_none() {
+        sleep(Duration::from_millis(100));
+    }
+    assert!(
+        first.try_wait().unwrap().is_some(),
+        "watcher outlived the server"
+    );
+}

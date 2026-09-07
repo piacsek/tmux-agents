@@ -13,6 +13,7 @@ use tmux_agents::status::render;
 use tmux_agents::tmux::{CliTmux, PaneInfo, Tmux};
 
 const TICK: Duration = Duration::from_millis(500);
+const WATCH_INTERVAL: Duration = Duration::from_secs(1);
 
 fn main() -> ExitCode {
     match cli::parse(env::args().skip(1)) {
@@ -21,6 +22,10 @@ fn main() -> ExitCode {
             Err(err) => fail(&err.to_string()),
         },
         Ok(Command::Status) => match status() {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(err) => fail(&err.to_string()),
+        },
+        Ok(Command::Watch) => match watch() {
             Ok(()) => ExitCode::SUCCESS,
             Err(err) => fail(&err.to_string()),
         },
@@ -59,14 +64,43 @@ fn status() -> std::io::Result<()> {
     Ok(())
 }
 
-fn cached(ttl: Duration, command: &[String]) -> std::io::Result<()> {
-    let cache_dir = env::var_os("XDG_CACHE_HOME")
+fn watch() -> std::io::Result<()> {
+    let lock = cache_dir().join(format!("watch-{}.pid", socket_key()));
+    if !tmux_agents::watch::claim(&lock, std::process::id() as i32, &is_alive)? {
+        return Ok(());
+    }
+    let tmux = CliTmux::default();
+    let source = agent_source(&tmux);
+    let ticks = std::iter::from_fn(|| {
+        std::thread::sleep(WATCH_INTERVAL);
+        Some(Ok(std::time::Instant::now()))
+    });
+    tmux_agents::watch::run(&tmux, source, ticks)
+}
+
+fn socket_key() -> String {
+    use std::hash::{DefaultHasher, Hash, Hasher};
+    let socket = env::var("TMUX").unwrap_or_default();
+    let mut hasher = DefaultHasher::new();
+    socket
+        .split(',')
+        .next()
+        .unwrap_or_default()
+        .hash(&mut hasher);
+    format!("{:016x}", hasher.finish())
+}
+
+fn cache_dir() -> PathBuf {
+    env::var_os("XDG_CACHE_HOME")
         .map(PathBuf::from)
         .or_else(|| env::var_os("HOME").map(|home| PathBuf::from(home).join(".cache")))
         .unwrap_or_default()
-        .join("tmux-agents");
+        .join("tmux-agents")
+}
+
+fn cached(ttl: Duration, command: &[String]) -> std::io::Result<()> {
     let output = tmux_agents::cached::run(
-        &cache_dir,
+        &cache_dir(),
         ttl,
         command,
         SystemTime::now(),

@@ -1,11 +1,13 @@
 use std::time::Duration;
 
-pub const USAGE: &str = "usage: tmux-agents [status | cached <ttl-seconds> -- <command> [args...]]";
+pub const USAGE: &str =
+    "usage: tmux-agents [status | watch | cached <ttl-seconds> -- <command> [args...]]";
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Command {
     Tui,
     Status,
+    Watch,
     Cached { ttl: Duration, command: Vec<String> },
 }
 
@@ -18,6 +20,7 @@ where
     match args.next().as_deref() {
         None => Ok(Command::Tui),
         Some("status") => Ok(Command::Status),
+        Some("watch") => Ok(Command::Watch),
         Some("cached") => parse_cached(args),
         Some(arg) => Err(format!("unknown argument '{arg}'\n{USAGE}")),
     }
@@ -71,5 +74,10 @@ mod tests {
     #[test]
     fn status_subcommand_is_recognised() {
         assert_eq!(parse(vec!["status".to_string()]), Ok(Command::Status));
+    }
+
+    #[test]
+    fn watch_subcommand_is_recognised() {
+        assert_eq!(parse(["watch"]), Ok(Command::Watch));
     }
 }

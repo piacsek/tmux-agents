@@ -16,7 +16,8 @@ agents: it runs `<cmd>` at most once per TTL and serves the cached stdout.
 
 ```
 src/main.rs      CLI dispatch, event loop wiring (event::poll → Input::Tick every 500 ms)
-src/cli.rs       `tmux-agents` (TUI) | `tmux-agents status` | `tmux-agents cached <ttl> -- <cmd>`
+src/cli.rs       `tmux-agents` (TUI) | `status` | `watch` | `cached <ttl> -- <cmd>`
+src/watch.rs     Watcher (pure transition detector) + run() loop + pid lock for `watch`
 src/cached.rs    TTL cache for status-line widgets; key = hash of argv, freshness = file mtime
 src/registry.rs  lenient serde of ~/.claude/sessions/<pid>.json
 src/tmux.rs      Tmux trait (list_panes, focus, new_claude_pane, kill_pane, capture), CliTmux, pane parsing
@@ -78,6 +79,15 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   `none` so a config-level separator never dangles. The blocked segment names
   the sessions (`◉ webapp dotfiles +1`, two names then `+n`, oldest prompt
   first) while working and idle stay counts.
+- **`watch` alerts only on transitions.** `Watcher::observe` treats its first
+  call as a baseline (no alerts for sessions already blocked at startup), then
+  alerts when a pid is blocked now and was not blocked before, subject to a
+  3s per-pid quiet window (`watch::QUIET`). Alerts go to every client from
+  `list-clients` whose active pane is not the blocked pane, via
+  `display-message -d 4000 -c <client>`. The loop returns the first tmux error,
+  which is how it dies with the server. `watch::claim` writes a pid lock at
+  `~/.cache/tmux-agents/watch-<hash of $TMUX socket>.pid`; a live holder makes
+  a second `watch` exit 0 immediately, so re-sourcing the config is safe.
 - **`cached` stamps the cache file's mtime with the caller's `now`** and reads
   freshness from that mtime, so tests drive it with a fixed clock and a
   tempdir. Writes go to a `.tmp<pid>` sibling then `rename`, so a status-line
@@ -126,4 +136,5 @@ cannot evaluate `#()`; verify status-line output with `tmux run-shell` instead.
 bind -n M-c display-popup -E -w 70% -h 60% "tmux-agents"
 set -g status-right " #(tmux-agents status) #[fg=white]|#[default] #(tmux-agents cached 5 -- ~/dotfiles/scripts/tmux-git-widget '#{pane_current_path}') …"
 set-option -g status-interval 1
+run-shell -b "tmux-agents watch"
 ```
