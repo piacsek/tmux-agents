@@ -26,9 +26,13 @@ pane, `x` kill (asks `y/n`), `p` toggle preview, `?` help, `q` quit.
 
 ## Install
 
+macOS (Apple silicon or Intel) and Linux x86_64, into `~/.local/bin`:
+
 ```sh
-cargo install --path . --root ~/.local --locked
+mkdir -p ~/.local/bin && curl -fsSL "https://github.com/piacsek/tmux-agents/releases/latest/download/tmux-agents-$(uname -m | sed s/arm64/aarch64/)-$(uname -s | sed 's/Darwin/apple-darwin/;s/Linux/unknown-linux-gnu/').tar.gz" | tar xz -C ~/.local/bin
 ```
+
+From source: `cargo install --path . --root ~/.local --locked`.
 
 `~/.tmux.conf`:
 

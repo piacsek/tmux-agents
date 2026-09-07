@@ -150,8 +150,11 @@ cannot evaluate `#()`; verify status-line output with `tmux run-shell` instead.
 ## Releasing
 
 Releases are GitHub Releases built by `.github/workflows/release.yml` on a `v*` tag:
-one tarball per target (`aarch64-apple-darwin`, `x86_64-apple-darwin`,
-`x86_64-unknown-linux-gnu`) plus `.sha256`, with generated notes. The workflow
+one flat tarball per target (`tmux-agents-<target>.tar.gz` holding just the
+binary; targets `aarch64-apple-darwin`, `x86_64-apple-darwin`,
+`x86_64-unknown-linux-gnu`) plus `.sha256`, with generated notes. Asset names
+carry no version so the README's `releases/latest/download/` one-liner stays
+valid; do not rename them. The workflow
 refuses a tag whose version differs from `Cargo.toml`.
 
 1. Bump `version` in `Cargo.toml` (`Cargo.lock` follows on the next build) and

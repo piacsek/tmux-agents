@@ -40,10 +40,8 @@ jobs:
       - run: cargo build --release --locked --target ${{ matrix.target }}
       - name: Package
         run: |
-          name="tmux-agents-${GITHUB_REF_NAME}-${{ matrix.target }}"
-          mkdir "$name"
-          cp "target/${{ matrix.target }}/release/tmux-agents" README.md AGENTS.md "$name/"
-          tar czf "$name.tar.gz" "$name"
+          name="tmux-agents-${{ matrix.target }}"
+          tar czf "$name.tar.gz" -C "target/${{ matrix.target }}/release" tmux-agents
           shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256"
       - uses: actions/upload-artifact@v4
         with:
