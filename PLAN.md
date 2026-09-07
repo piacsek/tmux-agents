@@ -309,9 +309,10 @@ Twelve items from the review, each under /tdd:
 11. Popup 70% × 60%.
 12. Zero-session e2e for `status`.
 
-## Backlog (proposed 2026-09-07, not started)
+## Backlog (proposed 2026-09-07) — all nine DONE 2026-09-07
 
-Ranked by value. Suggested order: 5, 8, 7, 4, 3, 2, 1, then decide on 6 and 9.
+Ranked by value. Executed in the suggested order 5, 8, 7, 4, 3, 2, 1, 6, 9, one
+commit per item, gates + reinstall before each commit. Per-item notes inline.
 
 ### High value
 1. **Preview pane.** Split the popup into list | `capture-pane` of the selected session, refreshed on the tick. Lets you read a blocked session's permission prompt or question without switching. Medium: one new `Tmux` trait method (`capture(pane) -> Vec<String>`), a horizontal layout, a fake in tests, snapshot for the layout. Consider `p` to toggle it and remembering the choice in the session. — DONE 2026-09-07 (`p` toggles; shown only at ≥100 columns; capture failures degrade to no preview; choice not persisted).
