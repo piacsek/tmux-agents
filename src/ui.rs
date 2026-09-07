@@ -110,7 +110,8 @@ fn draw_list(frame: &mut Frame, area: Rect, app: &mut App) {
     let stale_after = Duration::from_secs(app.config.picker.stale_after_minutes * 60);
     let items: Vec<ListItem> = visible
         .into_iter()
-        .map(|agent| row(agent, label_width, row_width, stale_after))
+        .enumerate()
+        .map(|(index, agent)| row(index, agent, label_width, row_width, stale_after))
         .collect();
     let list = List::new(items).highlight_symbol(HIGHLIGHT);
     frame.render_stateful_widget(list, area, &mut app.list);
@@ -147,7 +148,13 @@ fn draw_footer(frame: &mut Frame, area: Rect, app: &App) {
     );
 }
 
-fn row(agent: &Agent, label_width: usize, row_width: usize, stale_after: Duration) -> ListItem<'_> {
+fn row(
+    index: usize,
+    agent: &Agent,
+    label_width: usize,
+    row_width: usize,
+    stale_after: Duration,
+) -> ListItem<'_> {
     let state = State::from(agent.status);
     let (glyph_style, word) = if agent.is_stale(stale_after) {
         (state.style().add_modifier(Modifier::DIM), "stale?")
@@ -155,6 +162,8 @@ fn row(agent: &Agent, label_width: usize, row_width: usize, stale_after: Duratio
         (state.style(), state.word())
     };
     let mut spans = vec![
+        Span::styled(shortcut(index), dim()),
+        Span::raw(" "),
         Span::styled(state.glyph(), glyph_style),
         Span::raw(" "),
         Span::styled(format!("{word:<WORD_WIDTH$}"), dim()),
@@ -197,6 +206,13 @@ fn middle(agent: &Agent, room: usize) -> Vec<Span<'_>> {
     };
     spans.push(Span::styled(truncate(&detail, room), dim()));
     spans
+}
+
+fn shortcut(index: usize) -> String {
+    match index {
+        0..=8 => (index + 1).to_string(),
+        _ => " ".to_string(),
+    }
 }
 
 fn truncate(text: &str, room: usize) -> String {

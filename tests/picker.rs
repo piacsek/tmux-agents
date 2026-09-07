@@ -28,8 +28,8 @@ fn rows_show_labels_with_first_highlighted() {
 
     let screen = picker.screen();
     let rows: Vec<&str> = screen.lines().collect();
-    assert!(rows[0].starts_with("> ○ idle     dotfiles"), "{screen}");
-    assert!(rows[1].starts_with("  ○ idle     webapp"), "{screen}");
+    assert!(rows[0].starts_with("> 1 ○ idle     dotfiles"), "{screen}");
+    assert!(rows[1].starts_with("  2 ○ idle     webapp"), "{screen}");
 }
 
 #[test]
@@ -46,7 +46,7 @@ fn j_and_down_move_highlight_down() {
             .lines()
             .nth(1)
             .unwrap()
-            .starts_with("> ○ idle     b")
+            .starts_with("> 2 ○ idle     b")
     );
 
     let mut picker = Picker::new(agents());
@@ -63,7 +63,7 @@ fn j_and_down_move_highlight_down() {
             .lines()
             .nth(2)
             .unwrap()
-            .starts_with("> ○ idle     c")
+            .starts_with("> 3 ○ idle     c")
     );
 }
 
@@ -84,11 +84,19 @@ fn k_and_up_move_highlight_up_and_clamp_at_both_ends() {
 
     let screen = picker.screen();
     assert!(
-        screen.lines().next().unwrap().starts_with("> ○ idle     a"),
+        screen
+            .lines()
+            .next()
+            .unwrap()
+            .starts_with("> 1 ○ idle     a"),
         "{screen}"
     );
     assert!(
-        screen.lines().nth(1).unwrap().starts_with("  ○ idle     b"),
+        screen
+            .lines()
+            .nth(1)
+            .unwrap()
+            .starts_with("  2 ○ idle     b"),
         "{screen}"
     );
 }
@@ -147,7 +155,7 @@ fn row_shows_title_after_label_when_present() {
             .lines()
             .next()
             .unwrap()
-            .starts_with("> ○ idle     dotfiles  Fix the picker"),
+            .starts_with("> 1 ○ idle     dotfiles  Fix the picker"),
         "{screen}"
     );
     assert!(
@@ -155,7 +163,7 @@ fn row_shows_title_after_label_when_present() {
             .lines()
             .nth(1)
             .unwrap()
-            .starts_with("  ○ idle     webapp    "),
+            .starts_with("  2 ○ idle     webapp    "),
         "{screen}"
     );
 }
@@ -183,7 +191,7 @@ fn shift_g_jumps_to_the_last_row() {
             .lines()
             .nth(2)
             .unwrap()
-            .starts_with("> ○ idle     c")
+            .starts_with("> 3 ○ idle     c")
     );
 }
 
@@ -206,7 +214,7 @@ fn gg_jumps_to_the_first_row_but_a_lone_g_does_nothing() {
             .lines()
             .next()
             .unwrap()
-            .starts_with("> ○ idle     a")
+            .starts_with("> 1 ○ idle     a")
     );
 
     let mut picker = Picker::new(three());
@@ -225,7 +233,7 @@ fn gg_jumps_to_the_first_row_but_a_lone_g_does_nothing() {
             .lines()
             .nth(2)
             .unwrap()
-            .starts_with("> ○ idle     c"),
+            .starts_with("> 3 ○ idle     c"),
         "{}",
         picker.screen()
     );
@@ -254,7 +262,7 @@ fn slash_filters_rows_by_label_and_shows_the_query() {
         .filter(|l| !l.is_empty())
         .collect();
     assert_eq!(rows.len(), 2, "{screen}");
-    assert!(rows[0].starts_with("> ○ idle     webapp  "), "{screen}");
+    assert!(rows[0].starts_with("> 1 ○ idle     webapp  "), "{screen}");
     assert!(rows[1].starts_with("/Ap"), "{screen}");
 }
 
@@ -275,7 +283,7 @@ fn filter_also_matches_the_title() {
 
     let screen = picker.screen();
     assert!(
-        screen.contains("> ○ idle     dotfiles  Fix the Picker"),
+        screen.contains("> 1 ○ idle     dotfiles  Fix the Picker"),
         "{screen}"
     );
     assert!(!screen.contains("webapp"), "{screen}");
@@ -295,7 +303,7 @@ fn backspace_edits_the_query_and_esc_clears_the_filter_without_quitting() {
         ])
         .unwrap();
     let screen = picker.screen();
-    assert!(screen.contains("> ○ idle     webapp"), "{screen}");
+    assert!(screen.contains("> 1 ○ idle     webapp"), "{screen}");
     assert!(screen.contains("/w"), "{screen}");
     assert!(!screen.contains("/wx"), "{screen}");
 
@@ -357,7 +365,7 @@ fn starting_a_filter_moves_the_highlight_to_the_first_match() {
             .lines()
             .next()
             .unwrap()
-            .starts_with("> ○ idle     webapp"),
+            .starts_with("> 1 ○ idle     webapp"),
         "{screen}"
     );
 }
@@ -377,11 +385,11 @@ fn rows_show_a_state_glyph_and_word() {
     let screen = picker.screen();
     let rows: Vec<&str> = screen.lines().take(5).collect();
     let expected = [
-        "> ● working  a",
-        "  ● working  b",
-        "  ◉ blocked  c",
-        "  ○ idle     d",
-        "  ○ ?        e",
+        "> 1 ● working  a",
+        "  2 ● working  b",
+        "  3 ◉ blocked  c",
+        "  4 ○ idle     d",
+        "  5 ○ ?        e",
     ];
     for (row, want) in rows.iter().zip(expected) {
         assert!(
@@ -402,13 +410,13 @@ fn state_dots_use_the_ansi_palette_and_words_are_dim() {
 
     picker.run(Vec::new()).unwrap();
 
-    let dot = |y| picker.cell(2, y);
+    let dot = |y| picker.cell(4, y);
     assert_eq!(dot(0).fg, Color::Yellow);
     assert_eq!(dot(1).fg, Color::Red);
     assert_eq!(dot(2).fg, Color::Reset);
     assert!(dot(2).modifier.contains(Modifier::DIM));
     assert_eq!(dot(3).fg, Color::DarkGray);
-    let word_style = picker.cell(4, 0);
+    let word_style = picker.cell(6, 0);
     assert_eq!(word_style.symbol(), "w");
     assert!(word_style.modifier.contains(Modifier::DIM));
 }
@@ -445,11 +453,19 @@ fn refresh_keeps_row_order_and_the_selected_agent_when_the_source_reorders() {
     assert_eq!(picker.tmux.focused(), vec![PaneId("%2".to_string())]);
     let screen = picker.screen();
     assert!(
-        screen.lines().next().unwrap().starts_with("  ○ idle     a"),
+        screen
+            .lines()
+            .next()
+            .unwrap()
+            .starts_with("  1 ○ idle     a"),
         "{screen}"
     );
     assert!(
-        screen.lines().nth(1).unwrap().starts_with("> ○ idle     b"),
+        screen
+            .lines()
+            .nth(1)
+            .unwrap()
+            .starts_with("> 2 ○ idle     b"),
         "{screen}"
     );
 }
@@ -503,8 +519,14 @@ fn state_word_precedes_the_dir_and_dir_and_title_columns_are_aligned() {
 
     let screen = picker.screen();
     let rows: Vec<&str> = screen.lines().take(2).collect();
-    assert!(rows[0].starts_with("> ○ idle     a        T1 "), "{screen}");
-    assert!(rows[1].starts_with("  ● working  bb-long  T2 "), "{screen}");
+    assert!(
+        rows[0].starts_with("> 1 ○ idle     a        T1 "),
+        "{screen}"
+    );
+    assert!(
+        rows[1].starts_with("  2 ● working  bb-long  T2 "),
+        "{screen}"
+    );
 }
 
 #[test]
@@ -562,7 +584,7 @@ fn question_mark_toggles_a_help_view_and_types_while_filtering() {
 
     picker.run(vec![key(KeyCode::Char('j'))]).unwrap();
     let screen = picker.screen();
-    assert!(screen.contains("> ○ idle     dotfiles"), "{screen}");
+    assert!(screen.contains("> 1 ○ idle     dotfiles"), "{screen}");
 
     let mut picker = Picker::new(vec![agent("dotfiles", "%1")]);
     picker
@@ -597,11 +619,19 @@ fn refresh_appends_new_agents_and_drops_gone_ones_without_moving_the_rest() {
 
     let screen = picker.screen();
     assert!(
-        screen.lines().next().unwrap().starts_with("> ○ idle     a"),
+        screen
+            .lines()
+            .next()
+            .unwrap()
+            .starts_with("> 1 ○ idle     a"),
         "{screen}"
     );
     assert!(
-        screen.lines().nth(1).unwrap().starts_with("  ○ idle     c"),
+        screen
+            .lines()
+            .nth(1)
+            .unwrap()
+            .starts_with("  2 ○ idle     c"),
         "{screen}"
     );
     assert!(!screen.contains("idle     b"), "{screen}");
@@ -635,7 +665,7 @@ fn rows_show_the_state_age_right_aligned() {
 
     let screen = picker.screen();
     let rows: Vec<&str> = screen.lines().take(3).collect();
-    assert!(rows[0].starts_with("> ○ idle     a"), "{screen}");
+    assert!(rows[0].starts_with("> 1 ○ idle     a"), "{screen}");
     assert!(rows[0].trim_end().ends_with(" 1m"), "{screen}");
     assert!(rows[1].contains("b  Some title"), "{screen}");
     assert!(rows[1].trim_end().ends_with(" 3h"), "{screen}");
@@ -668,8 +698,8 @@ fn blocked_rows_show_the_reason_in_red_before_the_title() {
         "{screen}"
     );
     assert!(screen.contains("◉ blocked  b  input needed"), "{screen}");
-    assert_eq!(picker.cell(16, 0).symbol(), "p");
-    assert_eq!(picker.cell(16, 0).fg, Color::Red);
+    assert_eq!(picker.cell(18, 0).symbol(), "p");
+    assert_eq!(picker.cell(18, 0).fg, Color::Red);
 }
 
 #[test]
@@ -686,7 +716,7 @@ fn untitled_rows_fall_back_to_the_cwd_and_long_titles_get_an_ellipsis() {
     let screen = picker.screen();
     let rows: Vec<&str> = screen.lines().take(2).collect();
     assert!(
-        rows[0].starts_with("> ○ idle     dotfiles  ~/projects/dotfiles"),
+        rows[0].starts_with("> 1 ○ idle     dotfiles  ~/projects/dotfiles"),
         "{screen}"
     );
     assert!(
@@ -713,7 +743,7 @@ fn x_asks_for_confirmation_before_killing_the_selected_pane() {
             .starts_with("kill webapp? y/n"),
         "{screen}"
     );
-    assert!(screen.contains("> ○ idle     webapp"), "{screen}");
+    assert!(screen.contains("> 2 ○ idle     webapp"), "{screen}");
     assert!(picker.tmux.killed().is_empty());
 }
 
@@ -757,7 +787,7 @@ fn n_and_esc_cancel_the_kill_and_return_to_the_list() {
         assert!(picker.tmux.killed().is_empty());
         assert_eq!(picker.tmux.new_panes_requested(), 0);
         let screen = picker.screen();
-        assert!(screen.contains("> ○ idle     dotfiles"), "{screen}");
+        assert!(screen.contains("> 1 ○ idle     dotfiles"), "{screen}");
         assert!(
             !screen.lines().last().unwrap().starts_with("kill"),
             "{screen}"
@@ -786,12 +816,12 @@ fn working_rows_older_than_thirty_minutes_are_marked_stale_and_dimmed() {
 
     let screen = picker.screen();
     let rows: Vec<&str> = screen.lines().take(3).collect();
-    assert!(rows[0].starts_with("> ● stale?   a"), "{screen}");
-    assert!(rows[1].starts_with("  ● working  b"), "{screen}");
-    assert!(rows[2].starts_with("  ◉ blocked  c"), "{screen}");
-    assert_eq!(picker.cell(2, 0).fg, Color::Yellow);
-    assert!(picker.cell(2, 0).modifier.contains(Modifier::DIM));
-    assert!(!picker.cell(2, 1).modifier.contains(Modifier::DIM));
+    assert!(rows[0].starts_with("> 1 ● stale?   a"), "{screen}");
+    assert!(rows[1].starts_with("  2 ● working  b"), "{screen}");
+    assert!(rows[2].starts_with("  3 ◉ blocked  c"), "{screen}");
+    assert_eq!(picker.cell(4, 0).fg, Color::Yellow);
+    assert!(picker.cell(4, 0).modifier.contains(Modifier::DIM));
+    assert!(!picker.cell(4, 1).modifier.contains(Modifier::DIM));
 }
 
 #[test]
@@ -805,8 +835,25 @@ fn the_stale_threshold_comes_from_config() {
     picker.run(Vec::new()).unwrap();
 
     assert!(
-        picker.screen().starts_with("> ● stale?"),
+        picker.screen().starts_with("> 1 ● stale?"),
         "{}",
         picker.screen()
     );
+}
+
+#[test]
+fn rows_are_numbered_to_match_the_digit_keys() {
+    let agents: Vec<_> = (1..=11)
+        .map(|i| agent(&format!("p{i}"), &format!("%{i}")))
+        .collect();
+    let mut picker = Picker::with_size(agents, 60, 14);
+
+    picker.run(vec![key(KeyCode::Char('q'))]).unwrap();
+
+    let screen = picker.screen();
+    let rows: Vec<&str> = screen.lines().collect();
+    assert!(rows[0].starts_with("> 1 ○ idle     p1"), "{screen}");
+    assert!(rows[1].starts_with("  2 ○ idle     p2"), "{screen}");
+    assert!(rows[8].starts_with("  9 ○ idle     p9"), "{screen}");
+    assert!(rows[9].starts_with("    ○ idle     p10"), "{screen}");
 }

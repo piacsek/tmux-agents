@@ -112,7 +112,10 @@ fn binary_lists_a_live_session_without_any_keypress() {
     );
     let screen = server.wait_for_screen("fixture-project");
 
-    assert!(screen.contains("> ● working  fixture-project"), "{screen}");
+    assert!(
+        screen.contains("> 1 ● working  fixture-project"),
+        "{screen}"
+    );
 }
 
 #[test]
@@ -197,7 +200,10 @@ fn a_wide_binary_previews_the_registered_panes_content() {
     );
     let screen = server.wait_for_screen("PREVIEW-MARKER");
 
-    assert!(screen.contains("> ● working  fixture-project"), "{screen}");
+    assert!(
+        screen.contains("> 1 ● working  fixture-project"),
+        "{screen}"
+    );
     assert!(screen.contains("│ PREVIEW-MARKER"), "{screen}");
 }
 

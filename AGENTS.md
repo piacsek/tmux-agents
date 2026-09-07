@@ -67,6 +67,9 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
 - **Draw before the first read.** `run()` renders, then waits for input. The
   popup was blank until a keypress once; `tests/e2e.rs` guards it by running the
   real binary in a scratch tmux server and capturing the pane.
+- **Rows are numbered 1-9** in a dim column after the highlight, matching the
+  digit keys; the tenth row onwards shows a blank slot. Numbers follow the
+  visible (filtered) list, exactly like the keys do.
 - **Row order is stable while open.** `App::refresh` merges by pid: existing rows
   keep their position, new ones append, gone ones drop. Initial sort is blocked,
   working, idle. Selection follows the pid.
@@ -171,7 +174,8 @@ read the `.snap` diff, and commit it. Behaviour tests assert on row prefixes
 only, so layout changes do not ripple through them.
 
 Test-writing traps hit so far: `screen.contains("b")` matched "keybindings";
-cell coordinates are 0-based and rows start after the 2-cell highlight symbol;
+cell coordinates are 0-based and rows start after the 2-cell highlight symbol
+plus the 2-cell row number (the glyph sits at x=4, the state word at x=6);
 right-aligned columns make every row the same length.
 
 Install: `cargo install --path . --root ~/.local --locked`. Reinstall after

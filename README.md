@@ -10,7 +10,7 @@ watcher.
 
 ![picker](docs/picker.png)
 
-Keys: `j/k` move, `1-9` focus row, `/` filter, `Enter` focus, `n` new Claude
+Keys: `j/k` move, `1-9` focus the numbered row, `/` filter, `Enter` focus, `n` new Claude
 pane, `x` kill (asks `y/n`), `p` toggle preview, `?` help, `q` quit.
 
 - **Preview**: `p` shows the selected pane's screen on the right (popups ≥ 100

@@ -50,7 +50,7 @@ fn a_wide_popup_previews_the_selected_pane_on_the_right() {
         picker.screen()
     );
     assert!(
-        picker.screen().contains("> ○ idle     dotfiles"),
+        picker.screen().contains("> 1 ○ idle     dotfiles"),
         "{}",
         picker.screen()
     );
@@ -82,7 +82,7 @@ fn p_toggles_the_preview_off_and_back_on() {
     let screen = picker.screen();
     assert!(!screen.contains("cargo test"), "{screen}");
     assert!(!screen.contains('│'), "{screen}");
-    assert!(screen.contains("> ○ idle     dotfiles"), "{screen}");
+    assert!(screen.contains("> 1 ○ idle     dotfiles"), "{screen}");
 
     picker.run(vec![key(KeyCode::Char('p'))]).unwrap();
     assert!(
@@ -143,7 +143,7 @@ fn a_failed_capture_leaves_the_list_up_without_a_preview() {
         .unwrap();
 
     let screen = picker.screen();
-    assert!(screen.contains("> ○ idle     webapp"), "{screen}");
+    assert!(screen.contains("> 2 ○ idle     webapp"), "{screen}");
     assert!(!screen.contains('│'), "{screen}");
     assert_eq!(picker.tmux.focused().len(), 1);
 }
