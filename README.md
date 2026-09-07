@@ -56,7 +56,7 @@ run-shell -b "tmux-agents watch"
 ```
 
 `cached <ttl-seconds> -- <command>` reruns a widget at most once per TTL so the
-1s interval stays cheap. `watch` runs one instance per server and exits with it.
+1s interval stays cheap; a failing command is shown but not cached. `watch` runs one instance per server and exits with it.
 
 ## Configure
 

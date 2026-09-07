@@ -116,7 +116,7 @@ pub fn claim(lock: &Path, pid: i32, alive: &dyn Fn(i32) -> bool) -> io::Result<b
         return Ok(false);
     }
     if let Some(dir) = lock.parent() {
-        fs::create_dir_all(dir)?;
+        crate::cached::private_dir(dir)?;
     }
     fs::write(lock, format!("{pid}\n"))?;
     Ok(true)

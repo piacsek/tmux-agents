@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::io;
 use std::time::{Duration, SystemTime};
 
-use tmux_agents::cached::run;
+use tmux_agents::cached::{Run, run};
 
 fn argv(parts: &[&str]) -> Vec<String> {
     parts.iter().map(|s| s.to_string()).collect()
@@ -21,10 +21,13 @@ impl Counting {
         }
     }
 
-    fn runner(&self) -> impl FnMut(&[String]) -> io::Result<String> + '_ {
+    fn runner(&self) -> impl FnMut(&[String]) -> io::Result<Run> + '_ {
         move |_| {
             *self.calls.borrow_mut() += 1;
-            Ok(self.output.clone())
+            Ok(Run {
+                stdout: self.output.clone(),
+                ok: true,
+            })
         }
     }
 
@@ -159,4 +162,60 @@ fn the_binary_caches_a_real_command_under_xdg_cache_home() {
     assert_eq!(String::from_utf8_lossy(&first.stdout).trim(), "1");
     assert_eq!(String::from_utf8_lossy(&second.stdout).trim(), "1");
     assert!(cache.path().join("tmux-agents").is_dir());
+
+    let failing = format!("{script}; exit 1");
+    let invoke_failing = || {
+        std::process::Command::new(env!("CARGO_BIN_EXE_tmux-agents"))
+            .args(["cached", "60", "--", "sh", "-c", &failing])
+            .env("XDG_CACHE_HOME", cache.path())
+            .output()
+            .unwrap()
+    };
+    invoke_failing();
+    let rerun = invoke_failing();
+    assert!(rerun.status.success());
+    assert_eq!(String::from_utf8_lossy(&rerun.stdout).trim(), "3");
+}
+
+#[test]
+fn the_cache_dir_is_private_to_the_user() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().unwrap();
+    let cache = dir.path().join("tmux-agents");
+    std::fs::create_dir(&cache).unwrap();
+    std::fs::set_permissions(&cache, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let widget = Counting::new("dirty\n");
+
+    run(
+        &cache,
+        TTL,
+        &argv(&["git", "status"]),
+        epoch(1_000),
+        &mut widget.runner(),
+    )
+    .unwrap();
+
+    let mode = std::fs::metadata(&cache).unwrap().permissions().mode() & 0o777;
+    assert_eq!(mode, 0o700, "{mode:o}");
+}
+
+#[test]
+fn a_failed_command_is_returned_but_never_cached() {
+    let dir = tempfile::tempdir().unwrap();
+    let command = argv(&["git", "status"]);
+    let mut calls = 0;
+    let mut failing = |_: &[String]| {
+        calls += 1;
+        Ok(Run {
+            stdout: "fatal: not a repo\n".to_string(),
+            ok: false,
+        })
+    };
+
+    let first = run(dir.path(), TTL, &command, epoch(1_000), &mut failing).unwrap();
+    let second = run(dir.path(), TTL, &command, epoch(1_001), &mut failing).unwrap();
+
+    assert_eq!(first, "fatal: not a repo");
+    assert_eq!(second, "fatal: not a repo");
+    assert_eq!(calls, 2);
 }

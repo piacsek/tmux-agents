@@ -106,7 +106,11 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   freshness from that mtime, so tests drive it with a fixed clock and a
   tempdir. Writes go to a `.tmp<pid>` sibling then `rename`, so a status-line
   tick never reads a half-written file. Trailing newlines are trimmed and
-  stderr is discarded, matching the old `scripts/tmux-cached` shell script.
+  stderr is discarded, matching the old `scripts/tmux-cached` shell script. A
+  non-zero exit is printed but not stored, so a transient failure is retried on
+  the next tick instead of being served for a whole TTL. `cached::private_dir`
+  creates `~/.cache/tmux-agents` as 0700 (and re-tightens an existing dir);
+  `watch::claim` uses the same helper for the lock.
 - **Missing tmux binary.** `CliTmux::run` maps the spawn `NotFound` to
   `tmux not found on PATH; install tmux (brew install tmux)`; the TUI, `status`
   and `watch` exit 1 with that line, `config` and `cached` never touch tmux.
