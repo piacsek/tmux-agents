@@ -356,7 +356,7 @@ mod tests {
                 "-h",
                 "-c",
                 "#{pane_current_path}",
-                "zsh -ic claude",
+                "\"${SHELL:-sh}\" -ic claude",
             ]
         );
     }

@@ -87,7 +87,7 @@ display_ms = 4000
 skip_active_client = true
 
 [new_pane]
-command = "zsh -ic claude"
+command = "\"${SHELL:-sh}\" -ic claude"   # run by sh -c in the new pane
 direction = "horizontal"   # or "vertical"
 
 [labels]               # cwd -> name shown instead of the basename

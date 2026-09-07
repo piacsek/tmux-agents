@@ -18,7 +18,7 @@ fn a_missing_file_yields_defaults_with_the_preview_off() {
     assert_eq!(config.watch.quiet_ms, 3000);
     assert_eq!(config.watch.display_ms, 4000);
     assert!(config.watch.skip_active_client);
-    assert_eq!(config.new_pane.command, "zsh -ic claude");
+    assert_eq!(config.new_pane.command, "\"${SHELL:-sh}\" -ic claude");
     assert_eq!(
         config.new_pane.direction,
         tmux_agents::config::Direction::Horizontal

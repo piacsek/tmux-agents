@@ -82,7 +82,9 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   working, idle. Selection follows the pid.
 - **Focus from a popup.** `tmux switch-client -Z -t %<pane>` without a client
   target resolves to the client behind the popup; one command switches session,
-  window and pane. `command-prompt` does not work from a popup (the prompt shows,
+  window and pane. `n` runs `new_pane.command` through tmux's `sh -c`; the
+  default `"${SHELL:-sh}" -ic claude` picks up the user's login shell and rc
+  files instead of assuming zsh. `command-prompt` does not work from a popup (the prompt shows,
   its command dies with the popup client), which is why `n` uses `split-window`.
 - **`x` is the only destructive key** and always goes through
   `Mode::Confirm(pane)`; only `y` yields `Action::Kill`, any other key cancels.

@@ -97,7 +97,7 @@ pub struct NewPane {
 impl Default for NewPane {
     fn default() -> Self {
         Self {
-            command: "zsh -ic claude".to_string(),
+            command: "\"${SHELL:-sh}\" -ic claude".to_string(),
             direction: Direction::Horizontal,
         }
     }
