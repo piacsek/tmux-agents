@@ -10,6 +10,7 @@ use crate::state::{State, WORD_WIDTH};
 
 const HELP_HINT: &str = "press ? for keybindings";
 const HIGHLIGHT: &str = "> ";
+const PREVIEW_MIN_WIDTH: u16 = 100;
 
 pub fn draw(frame: &mut Frame, app: &mut App) {
     let [body, footer] =
@@ -18,10 +19,39 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         draw_help(frame, body);
     } else if app.agents.is_empty() {
         draw_empty(frame, body);
+    } else if let Some(lines) = preview_lines(app, body) {
+        let [list, preview] =
+            Layout::horizontal([Constraint::Percentage(50), Constraint::Fill(1)]).areas(body);
+        draw_list(frame, list, app);
+        draw_preview(frame, preview, &lines);
     } else {
         draw_list(frame, body, app);
     }
     draw_footer(frame, footer, app);
+}
+
+fn preview_lines(app: &App, body: Rect) -> Option<Vec<String>> {
+    if body.width < PREVIEW_MIN_WIDTH {
+        return None;
+    }
+    let lines = app.preview.clone()?;
+    let end = lines
+        .iter()
+        .rposition(|l| !l.trim().is_empty())
+        .map_or(0, |i| i + 1);
+    let start = end.saturating_sub(body.height as usize);
+    Some(lines[start..end].to_vec())
+}
+
+fn draw_preview(frame: &mut Frame, area: Rect, lines: &[String]) {
+    let [gutter, text] =
+        Layout::horizontal([Constraint::Length(2), Constraint::Fill(1)]).areas(area);
+    let rule: Vec<Line> = (0..gutter.height)
+        .map(|_| Line::from(Span::styled("│", dim())))
+        .collect();
+    frame.render_widget(Paragraph::new(rule), gutter);
+    let content: Vec<Line> = lines.iter().map(|l| Line::from(l.as_str())).collect();
+    frame.render_widget(Paragraph::new(content), text);
 }
 
 fn draw_empty(frame: &mut Frame, area: Rect) {
@@ -33,7 +63,7 @@ fn draw_empty(frame: &mut Frame, area: Rect) {
     frame.render_widget(Paragraph::new(text), area);
 }
 
-const KEYS: [(&str, &str); 9] = [
+const KEYS: [(&str, &str); 10] = [
     ("j/k ↓/↑", "move"),
     ("1-9", "focus row directly"),
     ("gg / G", "first / last"),
@@ -41,6 +71,7 @@ const KEYS: [(&str, &str); 9] = [
     ("Enter", "focus pane"),
     ("n", "new Claude pane"),
     ("x", "kill pane, asks y/n"),
+    ("p", "toggle preview"),
     ("q / Esc", "close"),
     ("?", "toggle this help"),
 ];

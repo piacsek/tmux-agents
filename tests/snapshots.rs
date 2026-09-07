@@ -31,7 +31,7 @@ fn filter_layout() {
 
 #[test]
 fn help_layout() {
-    let mut picker = Picker::new(sample());
+    let mut picker = Picker::with_size(sample(), 60, 12);
     picker.run(vec![key(KeyCode::Char('?'))]).unwrap();
     insta::assert_snapshot!(picker.screen());
 }
@@ -41,5 +41,23 @@ fn empty_layout() {
     let mut picker = Picker::new(vec![agent("unused", "%1")]);
     picker.next_refresh_returns(Vec::new());
     picker.run(vec![support::tick()]).unwrap();
+    insta::assert_snapshot!(picker.screen());
+}
+
+#[test]
+fn preview_layout() {
+    let mut picker = Picker::with_size(sample(), 120, 8);
+    picker.tmux.set_capture(
+        "%3",
+        &[
+            "● Bash(gh pr comment 42 --delete)",
+            "",
+            "Allow this command?",
+            "  1. Yes",
+            "  2. Yes, and don't ask again",
+            "  3. No",
+        ],
+    );
+    picker.run(Vec::new()).unwrap();
     insta::assert_snapshot!(picker.screen());
 }

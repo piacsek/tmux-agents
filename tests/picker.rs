@@ -551,7 +551,7 @@ fn footer_hints_at_help_on_the_bottom_right() {
 
 #[test]
 fn question_mark_toggles_a_help_view_and_types_while_filtering() {
-    let mut picker = Picker::new(vec![agent("dotfiles", "%1")]);
+    let mut picker = Picker::with_size(vec![agent("dotfiles", "%1")], 60, 12);
     picker.run(vec![key(KeyCode::Char('?'))]).unwrap();
     let screen = picker.screen();
     assert!(screen.contains("Enter"), "{screen}");

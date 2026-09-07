@@ -19,7 +19,7 @@ src/main.rs      CLI dispatch, event loop wiring (event::poll → Input::Tick ev
 src/cli.rs       `tmux-agents` (TUI) | `tmux-agents status` | `tmux-agents cached <ttl> -- <cmd>`
 src/cached.rs    TTL cache for status-line widgets; key = hash of argv, freshness = file mtime
 src/registry.rs  lenient serde of ~/.claude/sessions/<pid>.json
-src/tmux.rs      Tmux trait, CliTmux (shells out to `tmux`), pane parsing
+src/tmux.rs      Tmux trait (list_panes, focus, new_claude_pane, kill_pane, capture), CliTmux, pane parsing
 src/agents.rs    discover(): join registry × panes × pid liveness → Vec<Agent>, sorted
 src/state.rs     Status → State (glyph, word, ratatui style, tmux style)
 src/app.rs       App state machine (Mode::{Normal, Filter, Help, Confirm}), run() loop
@@ -60,6 +60,13 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
 - **`x` is the only destructive key** and always goes through
   `Mode::Confirm(pane)`; only `y` yields `Action::Kill`, any other key cancels.
   After `kill-pane` the popup stays open and refreshes so the row disappears.
+- **Preview** is `capture-pane -p` of the selected pane, fetched once per
+  `run()` iteration (every key and tick), shown only when the body is at least
+  `PREVIEW_MIN_WIDTH` (100) columns so the 60-column test terminal never
+  previews. Trailing blank lines are dropped and only the last `height` lines
+  are drawn. A failed capture (pane vanished mid-tick) means no preview, never
+  an exit. `p` toggles it for the life of the popup; the choice is not
+  persisted.
 - **Title stripping** removes any leading non-alphanumeric glyph plus space
   (Claude uses `✳` and spinner glyphs); a plain hostname title becomes `None`
   and the row falls back to `~/cwd`.
@@ -89,6 +96,9 @@ cargo clippy --all-targets -- -D warnings
 cargo test
 cargo test -- --ignored        # needs a tmux binary; spawns `tmux -L` servers
 ```
+
+Help-view tests use 12-row terminals (`Picker::with_size`) because the KEYS
+table no longer fits the default 60×8; preview tests use 120 columns.
 
 Layout tests are `insta` snapshots in `tests/snapshots.rs`. After an
 intentional layout change run `INSTA_UPDATE=always cargo test --test snapshots`,

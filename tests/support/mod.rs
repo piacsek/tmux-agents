@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::io;
 use std::rc::Rc;
 
@@ -17,6 +18,8 @@ pub struct FakeTmux {
     focused: RefCell<Vec<PaneId>>,
     new_panes: RefCell<usize>,
     killed: RefCell<Vec<PaneId>>,
+    captures: RefCell<HashMap<PaneId, Vec<String>>>,
+    capture_fails: RefCell<bool>,
 }
 
 impl FakeTmux {
@@ -30,6 +33,17 @@ impl FakeTmux {
 
     pub fn killed(&self) -> Vec<PaneId> {
         self.killed.borrow().clone()
+    }
+
+    pub fn fail_captures(&self) {
+        *self.capture_fails.borrow_mut() = true;
+    }
+
+    pub fn set_capture(&self, pane: &str, lines: &[&str]) {
+        self.captures.borrow_mut().insert(
+            PaneId(pane.to_string()),
+            lines.iter().map(|l| l.to_string()).collect(),
+        );
     }
 }
 
@@ -51,6 +65,18 @@ impl Tmux for FakeTmux {
     fn kill_pane(&self, pane: &PaneId) -> io::Result<()> {
         self.killed.borrow_mut().push(pane.clone());
         Ok(())
+    }
+
+    fn capture(&self, pane: &PaneId) -> io::Result<Vec<String>> {
+        if *self.capture_fails.borrow() {
+            return Err(io::Error::other("can't find pane"));
+        }
+        Ok(self
+            .captures
+            .borrow()
+            .get(pane)
+            .cloned()
+            .unwrap_or_default())
     }
 }
 
@@ -78,8 +104,12 @@ pub struct Picker {
 
 impl Picker {
     pub fn new(agents: Vec<Agent>) -> Self {
+        Self::with_size(agents, 60, 8)
+    }
+
+    pub fn with_size(agents: Vec<Agent>, width: u16, height: u16) -> Self {
         Self {
-            terminal: Terminal::new(TestBackend::new(60, 8)).unwrap(),
+            terminal: Terminal::new(TestBackend::new(width, height)).unwrap(),
             app: App::new(agents.clone()),
             tmux: FakeTmux::default(),
             source: Rc::new(RefCell::new(agents)),

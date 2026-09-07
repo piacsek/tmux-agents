@@ -9,4 +9,8 @@ gg / G   first / last
 Enter    focus pane                                         
 n        new Claude pane                                    
 x        kill pane, asks y/n                                
+p        toggle preview                                     
+q / Esc  close                                              
+?        toggle this help                                   
+                                                            
 tmux-agents v0.2.0                   press ? for keybindings

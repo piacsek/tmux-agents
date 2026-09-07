@@ -2,7 +2,7 @@ use std::io;
 use std::path::PathBuf;
 use std::process::Command;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PaneId(pub String);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,6 +20,7 @@ pub trait Tmux {
     fn focus(&self, pane: &PaneId) -> io::Result<()>;
     fn new_claude_pane(&self) -> io::Result<()>;
     fn kill_pane(&self, pane: &PaneId) -> io::Result<()>;
+    fn capture(&self, pane: &PaneId) -> io::Result<Vec<String>>;
 }
 
 const PANE_FORMAT: &str = "#{pane_id}\t#{session_name}\t#{window_id}\t#{window_index}\t#{pane_current_path}\t#{pane_title}";
@@ -58,6 +59,10 @@ impl CliTmux {
         self.args(&["kill-pane", "-t", &pane.0])
     }
 
+    pub fn capture_args(&self, pane: &PaneId) -> Vec<String> {
+        self.args(&["capture-pane", "-p", "-t", &pane.0])
+    }
+
     fn args(&self, command: &[&str]) -> Vec<String> {
         let mut args = Vec::new();
         if let Some(socket) = &self.socket_name {
@@ -94,6 +99,11 @@ impl Tmux for CliTmux {
 
     fn kill_pane(&self, pane: &PaneId) -> io::Result<()> {
         self.run(&self.kill_pane_args(pane)).map(drop)
+    }
+
+    fn capture(&self, pane: &PaneId) -> io::Result<Vec<String>> {
+        let stdout = self.run(&self.capture_args(pane))?;
+        Ok(stdout.lines().map(str::to_string).collect())
     }
 }
 
@@ -189,6 +199,14 @@ mod tests {
         assert_eq!(
             &scoped.focus_args(&PaneId("%1".to_string()))[..2],
             &["-L", "ci"]
+        );
+    }
+
+    #[test]
+    fn capture_prints_the_given_panes_visible_content() {
+        assert_eq!(
+            CliTmux::default().capture_args(&PaneId("%7".to_string())),
+            vec!["capture-pane", "-p", "-t", "%7"]
         );
     }
 

@@ -37,6 +37,8 @@ pub struct App {
     pub agents: Vec<Agent>,
     pub list: ListState,
     pub mode: Mode,
+    pub preview: Option<Vec<String>>,
+    pub preview_enabled: bool,
     pending_g: bool,
 }
 
@@ -47,8 +49,17 @@ impl App {
             agents,
             list,
             mode: Mode::Normal,
+            preview: None,
+            preview_enabled: true,
             pending_g: false,
         }
+    }
+
+    pub fn load_preview<T: Tmux>(&mut self, tmux: &T) {
+        self.preview = match self.selected_agent() {
+            Some(agent) if self.preview_enabled => tmux.capture(&agent.pane).ok(),
+            _ => None,
+        };
     }
 
     pub fn refresh(&mut self, agents: Vec<Agent>) {
@@ -130,6 +141,7 @@ impl App {
             KeyCode::Char('/') => self.mode = Mode::Filter(String::new()),
             KeyCode::Char('n') => return Action::NewClaudePane,
             KeyCode::Char('?') => self.mode = Mode::Help,
+            KeyCode::Char('p') => self.preview_enabled = !self.preview_enabled,
             KeyCode::Char('x') => {
                 if let Some(agent) = self.selected_agent() {
                     self.mode = Mode::Confirm(agent.pane.clone());
@@ -209,6 +221,7 @@ where
 {
     let mut inputs = inputs;
     loop {
+        app.load_preview(tmux);
         terminal
             .draw(|frame| ui::draw(frame, app))
             .map_err(io::Error::other)?;
