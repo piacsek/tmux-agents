@@ -1,6 +1,7 @@
 use crate::agents::Agent;
 use crate::config::StatusLine;
 use crate::state::State;
+use crate::text::truncate;
 use crate::tmux::escape;
 
 const ORDER: [State; 4] = [State::Blocked, State::Working, State::Idle, State::Unknown];
@@ -16,7 +17,7 @@ pub fn render(agents: &[Agent], config: &StatusLine) -> String {
                     .iter()
                     .filter(|agent| State::from(agent.status) == state)
                     .collect();
-                (!members.is_empty()).then(|| segment(state, &members, config.named_blocked))
+                (!members.is_empty()).then(|| segment(state, &members, config))
             })
             .collect::<Vec<_>>()
             .join(" ")
@@ -28,9 +29,9 @@ pub fn render(agents: &[Agent], config: &StatusLine) -> String {
     }
 }
 
-fn segment(state: State, members: &[&Agent], named_blocked: usize) -> String {
+fn segment(state: State, members: &[&Agent], config: &StatusLine) -> String {
     let body = match state {
-        State::Blocked if named_blocked > 0 => blocked_names(members, named_blocked),
+        State::Blocked if config.named_blocked > 0 => blocked_names(members, config),
         _ => members.len().to_string(),
     };
     format!(
@@ -40,11 +41,12 @@ fn segment(state: State, members: &[&Agent], named_blocked: usize) -> String {
     )
 }
 
-fn blocked_names(members: &[&Agent], named: usize) -> String {
+fn blocked_names(members: &[&Agent], config: &StatusLine) -> String {
+    let named = config.named_blocked;
     let mut parts: Vec<String> = members
         .iter()
         .take(named)
-        .map(|agent| escape(&agent.label))
+        .map(|agent| escape(&truncate(&agent.label, config.max_label)))
         .collect();
     if members.len() > named {
         parts.push(format!("+{}", members.len() - named));

@@ -56,6 +56,7 @@ impl Default for Preview {
 pub struct StatusLine {
     pub prefix: String,
     pub named_blocked: usize,
+    pub max_label: usize,
 }
 
 impl Default for StatusLine {
@@ -63,6 +64,7 @@ impl Default for StatusLine {
         Self {
             prefix: "#[fg=white]\u{F0674}#[default]".to_string(),
             named_blocked: 2,
+            max_label: 16,
         }
     }
 }

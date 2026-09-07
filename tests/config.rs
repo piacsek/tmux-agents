@@ -13,6 +13,7 @@ fn a_missing_file_yields_defaults_with_the_preview_off() {
     assert_eq!(config.picker.tick_ms, 500);
     assert_eq!(config.picker.stale_after_minutes, 30);
     assert_eq!(config.status.named_blocked, 2);
+    assert_eq!(config.status.max_label, 16);
     assert_eq!(config.status.prefix, "#[fg=white]\u{F0674}#[default]");
     assert_eq!(config.watch.interval_ms, 1000);
     assert_eq!(config.watch.quiet_ms, 3000);

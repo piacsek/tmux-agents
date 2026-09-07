@@ -93,6 +93,7 @@ fn the_prefix_and_named_blocked_count_come_from_config() {
     let plain = StatusLine {
         prefix: "CC".to_string(),
         named_blocked: 0,
+        ..StatusLine::default()
     };
     assert_eq!(
         render(&agents, &plain),
@@ -102,6 +103,7 @@ fn the_prefix_and_named_blocked_count_come_from_config() {
     let bare = StatusLine {
         prefix: String::new(),
         named_blocked: 1,
+        ..StatusLine::default()
     };
     assert_eq!(
         render(&agents, &bare),
@@ -118,4 +120,23 @@ fn blocked_names_escape_tmux_format_characters() {
         default_line(&agents),
         "#[fg=white]󰙴#[default]  #[fg=red,bold]◉ web##[bold]##{pid}#[default]"
     );
+}
+
+#[test]
+fn long_blocked_names_are_truncated_to_the_configured_width() {
+    let agents = vec![
+        agent_with_status("a-rather-long-project-name", "%1", Status::Waiting),
+        agent_with_status("short", "%2", Status::Waiting),
+    ];
+
+    let config = StatusLine {
+        prefix: String::new(),
+        named_blocked: 2,
+        max_label: 8,
+    };
+    assert_eq!(
+        render(&agents, &config),
+        "#[fg=red,bold]◉ a-rathe… short#[default]"
+    );
+    assert_eq!(StatusLine::default().max_label, 16);
 }

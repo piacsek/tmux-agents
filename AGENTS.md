@@ -29,6 +29,7 @@ src/state.rs     Status → State (glyph, word, ratatui style, tmux style)
 src/app.rs       App state machine (Mode::{Normal, Filter, Help, Confirm}), run() loop
 src/ui.rs        rendering; KEYS table drives the help view
 src/status.rs    status-line renderer
+src/text.rs      truncate() shared by rows and status names
 tests/           outside-in tests drive run() with a TestBackend + FakeTmux
 ```
 
@@ -108,7 +109,10 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
 - **Status-line output is tmux markup**, never ANSI. Zero sessions prints
   `none` so a config-level separator never dangles. The blocked segment names
   the sessions (`◉ webapp dotfiles +1`, two names then `+n`, oldest prompt
-  first) while working and idle stay counts.
+  first) while working and idle stay counts. Names longer than
+  `status.max_label` (16) are cut with `…` via `text::truncate`, the same
+  helper the picker rows use, so a long directory cannot overflow
+  `status-right-length`.
 - **`watch` alerts only on transitions.** `Watcher::observe` treats its first
   call as a baseline (no alerts for sessions already blocked at startup), then
   alerts when a pid is blocked now and was not blocked before, subject to a

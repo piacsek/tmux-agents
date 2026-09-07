@@ -79,6 +79,7 @@ split_percent = 50     # list width; preview gets the rest
 [status]
 prefix = "#[fg=white]󰙴#[default]"   # "" for none
 named_blocked = 2      # 0 = count only
+max_label = 16         # longer names end in …
 
 [watch]
 interval_ms = 1000

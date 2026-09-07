@@ -9,6 +9,7 @@ use ratatui::widgets::{List, ListItem, Paragraph};
 use crate::agents::Agent;
 use crate::app::{App, Mode, visible_agents};
 use crate::state::{State, WORD_WIDTH};
+use crate::text::truncate;
 
 const HELP_HINT: &str = "press ? for keybindings";
 const HIGHLIGHT: &str = "> ";
@@ -230,19 +231,6 @@ fn shortcut(index: usize) -> String {
         0..=8 => (index + 1).to_string(),
         _ => " ".to_string(),
     }
-}
-
-fn truncate(text: &str, room: usize) -> String {
-    let len = text.chars().count();
-    if len <= room {
-        return text.to_string();
-    }
-    if room == 0 {
-        return String::new();
-    }
-    let mut out: String = text.chars().take(room - 1).collect();
-    out.push('…');
-    out
 }
 
 fn tilde(path: &std::path::Path) -> String {
