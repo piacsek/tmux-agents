@@ -87,7 +87,10 @@ cell coordinates are 0-based and rows start after the 2-cell highlight symbol;
 right-aligned columns make every row the same length.
 
 Install: `cargo install --path . --root ~/.local --locked`. Reinstall after
-every change or the popup keeps running the old binary. `tmux display -p`
+every change or the popup keeps running the old binary. A milestone (backlog
+item, phase) is done only after the gates pass **and** the local binary has
+been reinstalled, so the popup and status line the user sees always run the
+committed code. `tmux display -p`
 cannot evaluate `#()`; verify status-line output with `tmux run-shell` instead.
 
 ## tmux integration (lives in the user's dotfiles, not here)
