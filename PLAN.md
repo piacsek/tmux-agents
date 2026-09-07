@@ -319,7 +319,7 @@ Ranked by value. Suggested order: 5, 8, 7, 4, 3, 2, 1, then decide on 6 and 9.
 3. **Blocked names in the status line.** When blocked > 0, print `◉ webapp` (cap at two names, then `+n`) instead of `◉ 1`. Small; pure change in `status::render`.
 
 ### Robustness
-4. **Move `tmux-cached` into the binary** as `tmux-agents cached <ttl> -- <cmd>`. The shell version is untested, spawns bash + `shasum` + `stat` per widget per tick, and its `stat -f`/`stat -c` branch is a portability risk. Rust version: one process, cache under `~/.cache/tmux-agents/`, tests with a tempdir and a fake clock. Then update both `status-right` definitions and delete `scripts/tmux-cached`.
+4. **Move `tmux-cached` into the binary** as `tmux-agents cached <ttl> -- <cmd>`. The shell version is untested, spawns bash + `shasum` + `stat` per widget per tick, and its `stat -f`/`stat -c` branch is a portability risk. Rust version: one process, cache under `~/.cache/tmux-agents/`, tests with a tempdir and a fake clock. Then update both `status-right` definitions and delete `scripts/tmux-cached`. — DONE 2026-09-07 (`src/cached.rs`, `tests/cached.rs`; dotfiles `.tmux.conf`, `~/.tmux_work.conf`, docs updated, script deleted).
 5. **CI builds release.** Add `cargo build --release` to `.github/workflows/tmux-agents.yml` so the lto/strip profile is compiled in CI, not only at `cargo install`. Trivial. — DONE (already in `ci.yml` at import; verified 2026-09-07).
 6. **Stale-busy detection.** A hung Claude process leaves `busy` forever. Dim a row `busy` for more than ~30 min, or show `busy?`. Small; needs a threshold constant and a test with a fixed `now`.
 

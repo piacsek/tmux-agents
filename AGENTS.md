@@ -8,13 +8,16 @@ factual; verify against the code before treating anything here as live state.
 A Rust + Ratatui popup for tmux that lists the Claude Code sessions running in
 the current tmux server, shows their state, and jumps to the selected pane.
 `tmux-agents status` prints the same data as tmux status-line markup.
+`tmux-agents cached <ttl> -- <cmd>` is a status-line helper unrelated to
+agents: it runs `<cmd>` at most once per TTL and serves the cached stdout.
 `PLAN.md` holds the phase history, retros, and the ranked backlog.
 
 ## Layout
 
 ```
 src/main.rs      CLI dispatch, event loop wiring (event::poll → Input::Tick every 500 ms)
-src/cli.rs       `tmux-agents` (TUI) | `tmux-agents status`
+src/cli.rs       `tmux-agents` (TUI) | `tmux-agents status` | `tmux-agents cached <ttl> -- <cmd>`
+src/cached.rs    TTL cache for status-line widgets; key = hash of argv, freshness = file mtime
 src/registry.rs  lenient serde of ~/.claude/sessions/<pid>.json
 src/tmux.rs      Tmux trait, CliTmux (shells out to `tmux`), pane parsing
 src/agents.rs    discover(): join registry × panes × pid liveness → Vec<Agent>, sorted
@@ -59,6 +62,11 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   and the row falls back to `~/cwd`.
 - **Status-line output is tmux markup**, never ANSI. Zero sessions prints
   `none` so a config-level separator never dangles.
+- **`cached` stamps the cache file's mtime with the caller's `now`** and reads
+  freshness from that mtime, so tests drive it with a fixed clock and a
+  tempdir. Writes go to a `.tmp<pid>` sibling then `rename`, so a status-line
+  tick never reads a half-written file. Trailing newlines are trimmed and
+  stderr is discarded, matching the old `scripts/tmux-cached` shell script.
 - **Colors** come from the ANSI palette (idle is `dim` with no fg) so terminal
   themes apply. Do not hardcode hex.
 
@@ -97,6 +105,6 @@ cannot evaluate `#()`; verify status-line output with `tmux run-shell` instead.
 
 ```
 bind -n M-c display-popup -E -w 70% -h 60% "tmux-agents"
-set -g status-right " #(tmux-agents status) #[fg=white]|#[default] …"
+set -g status-right " #(tmux-agents status) #[fg=white]|#[default] #(tmux-agents cached 5 -- ~/dotfiles/scripts/tmux-git-widget '#{pane_current_path}') …"
 set-option -g status-interval 1
 ```

@@ -24,6 +24,10 @@ fn main() -> ExitCode {
             Ok(()) => ExitCode::SUCCESS,
             Err(err) => fail(&err.to_string()),
         },
+        Ok(Command::Cached { ttl, command }) => match cached(ttl, &command) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(err) => fail(&err.to_string()),
+        },
         Err(err) => fail(&err),
     }
 }
@@ -52,6 +56,23 @@ fn status() -> std::io::Result<()> {
     let tmux = CliTmux::default();
     let agents = agent_source(&tmux)()?;
     println!("{}", render(&agents));
+    Ok(())
+}
+
+fn cached(ttl: Duration, command: &[String]) -> std::io::Result<()> {
+    let cache_dir = env::var_os("XDG_CACHE_HOME")
+        .map(PathBuf::from)
+        .or_else(|| env::var_os("HOME").map(|home| PathBuf::from(home).join(".cache")))
+        .unwrap_or_default()
+        .join("tmux-agents");
+    let output = tmux_agents::cached::run(
+        &cache_dir,
+        ttl,
+        command,
+        SystemTime::now(),
+        &mut tmux_agents::cached::shell_out,
+    )?;
+    println!("{output}");
     Ok(())
 }
 

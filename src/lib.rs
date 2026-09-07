@@ -1,5 +1,6 @@
 pub mod agents;
 pub mod app;
+pub mod cached;
 pub mod cli;
 pub mod process;
 pub mod registry;
