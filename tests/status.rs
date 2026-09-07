@@ -109,3 +109,13 @@ fn the_prefix_and_named_blocked_count_come_from_config() {
     );
     assert_eq!(render(&[], &bare), "#[dim]none#[default]");
 }
+
+#[test]
+fn blocked_names_escape_tmux_format_characters() {
+    let agents = vec![agent_with_status("web#[bold]#{pid}", "%1", Status::Waiting)];
+
+    assert_eq!(
+        default_line(&agents),
+        "#[fg=white]󰙴#[default]  #[fg=red,bold]◉ web##[bold]##{pid}#[default]"
+    );
+}

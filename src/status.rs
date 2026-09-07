@@ -1,6 +1,7 @@
 use crate::agents::Agent;
 use crate::config::StatusLine;
 use crate::state::State;
+use crate::tmux::escape;
 
 const ORDER: [State; 4] = [State::Blocked, State::Working, State::Idle, State::Unknown];
 
@@ -43,7 +44,7 @@ fn blocked_names(members: &[&Agent], named: usize) -> String {
     let mut parts: Vec<String> = members
         .iter()
         .take(named)
-        .map(|agent| agent.label.clone())
+        .map(|agent| escape(&agent.label))
         .collect();
     if members.len() > named {
         parts.push(format!("+{}", members.len() - named));

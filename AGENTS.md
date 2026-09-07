@@ -110,6 +110,10 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   and `watch` exit 1 with that line, `config` and `cached` never touch tmux.
   `tests/missing_tmux.rs` runs the real binary with an empty `PATH`. The tap
   formula declares `depends_on "tmux"`.
+- **Text handed to tmux is format-escaped.** `display-message` and `#()` status
+  output both expand `#{…}` and `#[…]` (verified on tmux 3.7c; `#()` is not run).
+  Labels and `waitingFor` come from directory names and Claude Code, so
+  `tmux::escape` doubles every `#` in `watch` alerts and `status` names.
 - **Colors** come from the ANSI palette (idle is `dim` with no fg) so terminal
   themes apply. Do not hardcode hex.
 

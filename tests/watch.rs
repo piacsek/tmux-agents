@@ -187,3 +187,18 @@ fn the_pid_lock_is_claimed_unless_a_live_watcher_holds_it() {
     std::fs::write(&lock, "garbage").unwrap();
     assert!(tmux_agents::watch::claim(&lock, 300, &alive).unwrap());
 }
+
+#[test]
+fn alert_text_escapes_tmux_format_characters_in_labels_and_reasons() {
+    let mut watcher = Watcher::default();
+    let t0 = Instant::now();
+    let busy = pid(agent_with_status("#{session_name}", "%2", Status::Busy), 2);
+    let mut blocked = busy.clone();
+    blocked.status = Status::Waiting;
+    blocked.waiting_for = Some("#(rm -rf /)".to_string());
+    watcher.observe(std::slice::from_ref(&busy), at(t0, 0));
+
+    let alerts = watcher.observe(&[blocked], at(t0, 1));
+
+    assert_eq!(alerts[0].text, "◉ ##{session_name}: ##(rm -rf /)");
+}

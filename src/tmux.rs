@@ -162,6 +162,10 @@ impl Tmux for CliTmux {
     }
 }
 
+pub fn escape(text: &str) -> String {
+    text.replace('#', "##")
+}
+
 pub fn parse_list_clients(stdout: &str) -> Vec<Client> {
     stdout
         .lines()

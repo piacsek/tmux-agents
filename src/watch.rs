@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 use crate::agents::Agent;
 use crate::config::Watch;
 use crate::state::State;
-use crate::tmux::{Client, PaneId, Tmux};
+use crate::tmux::{Client, PaneId, Tmux, escape};
 
 pub const QUIET: Duration = Duration::from_secs(3);
 
@@ -67,9 +67,10 @@ impl Watcher {
 }
 
 fn alert(agent: &Agent) -> Alert {
+    let label = escape(&agent.label);
     let text = match &agent.waiting_for {
-        Some(reason) => format!("◉ {}: {reason}", agent.label),
-        None => format!("◉ {} needs input", agent.label),
+        Some(reason) => format!("◉ {label}: {}", escape(reason)),
+        None => format!("◉ {label} needs input"),
     };
     Alert {
         pane: agent.pane.clone(),
