@@ -1,4 +1,5 @@
 use std::cmp::Reverse;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -31,6 +32,7 @@ pub fn discover(
     panes: &[PaneInfo],
     alive: &dyn Fn(i32) -> bool,
     now_ms: u64,
+    labels: &HashMap<PathBuf, String>,
 ) -> Vec<Agent> {
     let mut agents: Vec<Agent> = records
         .into_iter()
@@ -40,7 +42,10 @@ pub fn discover(
             let pane = panes.iter().find(|p| p.id == pane_id)?;
             Some(Agent {
                 pid: record.pid,
-                label: basename(&record.cwd),
+                label: labels
+                    .get(&record.cwd)
+                    .cloned()
+                    .unwrap_or_else(|| basename(&record.cwd)),
                 status: record.status,
                 cwd: record.cwd,
                 pane: pane.id.clone(),

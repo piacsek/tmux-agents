@@ -56,8 +56,8 @@ fn fail(message: &str) -> ExitCode {
 }
 
 fn tui(config: &Config) -> std::io::Result<()> {
-    let tmux = CliTmux::default();
-    let mut source = agent_source(&tmux);
+    let tmux = CliTmux::default().with_new_pane(config.new_pane.clone());
+    let mut source = agent_source(&tmux, config);
     let mut app = App::new(source()?, config.clone());
     let tick = Duration::from_millis(config.picker.tick_ms);
     ratatui::run(|terminal| {
@@ -73,7 +73,7 @@ fn tui(config: &Config) -> std::io::Result<()> {
 
 fn status(config: &Config) -> std::io::Result<()> {
     let tmux = CliTmux::default();
-    let agents = agent_source(&tmux)()?;
+    let agents = agent_source(&tmux, config)()?;
     println!("{}", render(&agents, &config.status));
     Ok(())
 }
@@ -84,7 +84,7 @@ fn watch(config: &Config) -> std::io::Result<()> {
         return Ok(());
     }
     let tmux = CliTmux::default();
-    let source = agent_source(&tmux);
+    let source = agent_source(&tmux, config);
     let interval = Duration::from_millis(config.watch.interval_ms);
     let ticks = std::iter::from_fn(move || {
         std::thread::sleep(interval);
@@ -125,12 +125,22 @@ fn cached(ttl: Duration, command: &[String]) -> std::io::Result<()> {
     Ok(())
 }
 
-fn agent_source(tmux: &CliTmux) -> impl FnMut() -> std::io::Result<Vec<Agent>> + '_ {
+fn agent_source<'a>(
+    tmux: &'a CliTmux,
+    config: &Config,
+) -> impl FnMut() -> std::io::Result<Vec<Agent>> + 'a {
     let config_dir = env::var_os("CLAUDE_CONFIG_DIR").map(PathBuf::from);
     let sessions = sessions_dir(config_dir, &home());
+    let labels = config.label_map(&home());
     move || {
         let panes: Vec<PaneInfo> = tmux.list_panes()?;
-        Ok(discover(load(&sessions), &panes, &is_alive, now_ms()))
+        Ok(discover(
+            load(&sessions),
+            &panes,
+            &is_alive,
+            now_ms(),
+            &labels,
+        ))
     }
 }
 

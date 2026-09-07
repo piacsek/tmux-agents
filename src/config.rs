@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::fs;
 use std::io;
@@ -150,6 +150,21 @@ pub fn load(path: &Path) -> Result<Config, ConfigError> {
 impl Config {
     pub fn to_toml(&self) -> String {
         toml::to_string_pretty(self).unwrap_or_default()
+    }
+
+    pub fn label_map(&self, home: &Path) -> HashMap<PathBuf, String> {
+        self.labels
+            .iter()
+            .map(|(cwd, label)| (expand_tilde(cwd, home), label.clone()))
+            .collect()
+    }
+}
+
+fn expand_tilde(path: &str, home: &Path) -> PathBuf {
+    match path.strip_prefix("~/") {
+        Some(rest) => home.join(rest),
+        None if path == "~" => home.to_path_buf(),
+        None => PathBuf::from(path),
     }
 }
 

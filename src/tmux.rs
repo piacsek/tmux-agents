@@ -3,6 +3,8 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::time::Duration;
 
+use crate::config::{Direction, NewPane};
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PaneId(pub String);
 
@@ -39,13 +41,19 @@ const CLIENT_FORMAT: &str = "#{client_name}\t#{pane_id}";
 #[derive(Debug, Default, Clone)]
 pub struct CliTmux {
     socket_name: Option<String>,
+    new_pane: NewPane,
 }
 
 impl CliTmux {
     pub fn with_socket(name: &str) -> Self {
         Self {
             socket_name: Some(name.to_string()),
+            ..Self::default()
         }
+    }
+
+    pub fn with_new_pane(self, new_pane: NewPane) -> Self {
+        Self { new_pane, ..self }
     }
 
     pub fn list_panes_args(&self) -> Vec<String> {
@@ -57,12 +65,16 @@ impl CliTmux {
     }
 
     pub fn new_claude_pane_args(&self) -> Vec<String> {
+        let direction = match self.new_pane.direction {
+            Direction::Horizontal => "-h",
+            Direction::Vertical => "-v",
+        };
         self.args(&[
             "split-window",
-            "-h",
+            direction,
             "-c",
             "#{pane_current_path}",
-            "zsh -ic claude",
+            &self.new_pane.command,
         ])
     }
 
@@ -299,6 +311,26 @@ mod tests {
         assert_eq!(
             CliTmux::default().kill_pane_args(&PaneId("%7".to_string())),
             vec!["kill-pane", "-t", "%7"]
+        );
+    }
+
+    #[test]
+    fn new_pane_direction_and_command_come_from_config() {
+        let config = NewPane {
+            command: "claude --continue".to_string(),
+            direction: Direction::Vertical,
+        };
+        assert_eq!(
+            CliTmux::default()
+                .with_new_pane(config)
+                .new_claude_pane_args(),
+            vec![
+                "split-window",
+                "-v",
+                "-c",
+                "#{pane_current_path}",
+                "claude --continue",
+            ]
         );
     }
 

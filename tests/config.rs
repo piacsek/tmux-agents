@@ -137,3 +137,26 @@ fn the_binary_prints_the_effective_config_and_rejects_a_broken_file() {
         assert!(stderr.contains("enable"), "{stderr}");
     }
 }
+
+#[test]
+fn label_keys_expand_a_leading_tilde_against_home() {
+    let mut config = Config::default();
+    config
+        .labels
+        .insert("~/projects/x".to_string(), "ex".to_string());
+    config
+        .labels
+        .insert("/abs/y".to_string(), "why".to_string());
+
+    let map = config.label_map(std::path::Path::new("/home/me"));
+
+    assert_eq!(
+        map.get(std::path::Path::new("/home/me/projects/x"))
+            .map(String::as_str),
+        Some("ex")
+    );
+    assert_eq!(
+        map.get(std::path::Path::new("/abs/y")).map(String::as_str),
+        Some("why")
+    );
+}
