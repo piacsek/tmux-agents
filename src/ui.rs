@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
@@ -105,9 +107,10 @@ fn draw_list(frame: &mut Frame, area: Rect, app: &mut App) {
         .max()
         .unwrap_or(0);
     let row_width = area.width.saturating_sub(HIGHLIGHT.chars().count() as u16) as usize;
+    let stale_after = Duration::from_secs(app.config.picker.stale_after_minutes * 60);
     let items: Vec<ListItem> = visible
         .into_iter()
-        .map(|agent| row(agent, label_width, row_width))
+        .map(|agent| row(agent, label_width, row_width, stale_after))
         .collect();
     let list = List::new(items).highlight_symbol(HIGHLIGHT);
     frame.render_stateful_widget(list, area, &mut app.list);
@@ -144,9 +147,9 @@ fn draw_footer(frame: &mut Frame, area: Rect, app: &App) {
     );
 }
 
-fn row(agent: &Agent, label_width: usize, row_width: usize) -> ListItem<'_> {
+fn row(agent: &Agent, label_width: usize, row_width: usize, stale_after: Duration) -> ListItem<'_> {
     let state = State::from(agent.status);
-    let (glyph_style, word) = if agent.is_stale() {
+    let (glyph_style, word) = if agent.is_stale(stale_after) {
         (state.style().add_modifier(Modifier::DIM), "stale?")
     } else {
         (state.style(), state.word())
@@ -244,7 +247,6 @@ fn dim() -> Style {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::Duration;
 
     #[test]
     fn age_is_rendered_in_the_largest_whole_unit() {

@@ -20,12 +20,9 @@ pub struct Agent {
     pub waiting_for: Option<String>,
 }
 
-pub const STALE_AFTER: Duration = Duration::from_secs(30 * 60);
-
 impl Agent {
-    pub fn is_stale(&self) -> bool {
-        State::from(self.status) == State::Working
-            && self.status_age.is_some_and(|age| age > STALE_AFTER)
+    pub fn is_stale(&self, after: Duration) -> bool {
+        State::from(self.status) == State::Working && self.status_age.is_some_and(|age| age > after)
     }
 }
 

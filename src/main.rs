@@ -13,7 +13,6 @@ use tmux_agents::registry::{load, sessions_dir};
 use tmux_agents::status::render;
 use tmux_agents::tmux::{CliTmux, PaneInfo, Tmux};
 
-const TICK: Duration = Duration::from_millis(500);
 const WATCH_INTERVAL: Duration = Duration::from_secs(1);
 
 fn main() -> ExitCode {
@@ -62,11 +61,12 @@ fn tui(config: &Config) -> std::io::Result<()> {
     let tmux = CliTmux::default();
     let mut source = agent_source(&tmux);
     let mut app = App::new(source()?, config.clone());
+    let tick = Duration::from_millis(config.picker.tick_ms);
     ratatui::run(|terminal| {
         run(
             terminal,
             &mut app,
-            std::iter::from_fn(|| Some(next_input())),
+            std::iter::from_fn(|| Some(next_input(tick))),
             &tmux,
             &mut source,
         )
@@ -142,8 +142,8 @@ fn now_ms() -> u64 {
         .unwrap_or(0)
 }
 
-fn next_input() -> std::io::Result<Input> {
-    if !event::poll(TICK)? {
+fn next_input(tick: Duration) -> std::io::Result<Input> {
+    if !event::poll(tick)? {
         return Ok(Input::Tick);
     }
     match event::read()? {

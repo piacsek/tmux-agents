@@ -793,3 +793,20 @@ fn working_rows_older_than_thirty_minutes_are_marked_stale_and_dimmed() {
     assert!(picker.cell(2, 0).modifier.contains(Modifier::DIM));
     assert!(!picker.cell(2, 1).modifier.contains(Modifier::DIM));
 }
+
+#[test]
+fn the_stale_threshold_comes_from_config() {
+    let mut config = tmux_agents::config::Config::default();
+    config.picker.stale_after_minutes = 5;
+    let mut working = agent_with_status("a", "%1", Status::Busy);
+    working.status_age = Some(std::time::Duration::from_secs(6 * 60));
+    let mut picker = Picker::with_config(vec![working], 60, 8, config);
+
+    picker.run(Vec::new()).unwrap();
+
+    assert!(
+        picker.screen().starts_with("> ● stale?"),
+        "{}",
+        picker.screen()
+    );
+}
