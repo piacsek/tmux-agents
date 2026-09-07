@@ -1,0 +1,12 @@
+---
+source: tests/snapshots.rs
+expression: picker.screen()
+---
+No Claude Code sessions in this tmux server                 
+                                                            
+n new Claude pane  q close                                  
+                                                            
+                                                            
+                                                            
+                                                            
+                                     press ? for keybindings

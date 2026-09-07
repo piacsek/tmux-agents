@@ -1,0 +1,12 @@
+---
+source: tests/snapshots.rs
+expression: picker.screen()
+---
+j/k ↓/↑  move                                               
+1-9      focus row directly                                 
+gg / G   first / last                                       
+/        filter, Esc clears                                 
+Enter    focus pane                                         
+n        new Claude pane                                    
+q / Esc  close                                              
+tmux-agents v0.1.0                   press ? for keybindings
