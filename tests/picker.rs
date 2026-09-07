@@ -770,3 +770,26 @@ fn n_and_esc_cancel_the_kill_and_return_to_the_list() {
         .unwrap();
     assert!(picker.tmux.killed().is_empty());
 }
+
+#[test]
+fn working_rows_older_than_thirty_minutes_are_marked_stale_and_dimmed() {
+    let minutes = |m: u64| Some(std::time::Duration::from_secs(m * 60));
+    let mut stale = agent_with_status("a", "%1", Status::Busy);
+    stale.status_age = minutes(31);
+    let mut fresh = agent_with_status("b", "%2", Status::Busy);
+    fresh.status_age = minutes(29);
+    let mut blocked = agent_with_status("c", "%3", Status::Waiting);
+    blocked.status_age = minutes(120);
+    let mut picker = Picker::new(vec![stale, fresh, blocked]);
+
+    picker.run(Vec::new()).unwrap();
+
+    let screen = picker.screen();
+    let rows: Vec<&str> = screen.lines().take(3).collect();
+    assert!(rows[0].starts_with("> ● stale?   a"), "{screen}");
+    assert!(rows[1].starts_with("  ● working  b"), "{screen}");
+    assert!(rows[2].starts_with("  ◉ blocked  c"), "{screen}");
+    assert_eq!(picker.cell(2, 0).fg, Color::Yellow);
+    assert!(picker.cell(2, 0).modifier.contains(Modifier::DIM));
+    assert!(!picker.cell(2, 1).modifier.contains(Modifier::DIM));
+}

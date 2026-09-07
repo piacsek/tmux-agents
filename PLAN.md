@@ -321,7 +321,7 @@ Ranked by value. Suggested order: 5, 8, 7, 4, 3, 2, 1, then decide on 6 and 9.
 ### Robustness
 4. **Move `tmux-cached` into the binary** as `tmux-agents cached <ttl> -- <cmd>`. The shell version is untested, spawns bash + `shasum` + `stat` per widget per tick, and its `stat -f`/`stat -c` branch is a portability risk. Rust version: one process, cache under `~/.cache/tmux-agents/`, tests with a tempdir and a fake clock. Then update both `status-right` definitions and delete `scripts/tmux-cached`. — DONE 2026-09-07 (`src/cached.rs`, `tests/cached.rs`; dotfiles `.tmux.conf`, `~/.tmux_work.conf`, docs updated, script deleted).
 5. **CI builds release.** Add `cargo build --release` to `.github/workflows/tmux-agents.yml` so the lto/strip profile is compiled in CI, not only at `cargo install`. Trivial. — DONE (already in `ci.yml` at import; verified 2026-09-07).
-6. **Stale-busy detection.** A hung Claude process leaves `busy` forever. Dim a row `busy` for more than ~30 min, or show `busy?`. Small; needs a threshold constant and a test with a fixed `now`.
+6. **Stale-busy detection.** A hung Claude process leaves `busy` forever. Dim a row `busy` for more than ~30 min, or show `busy?`. Small; needs a threshold constant and a test with a fixed `now`. — DONE 2026-09-07 (`stale?` word + dim glyph via `agents::STALE_AFTER`; status line unchanged).
 
 ### Polish
 7. **Oldest blocked first.** Within the blocked group sort by age descending so the most neglected prompt is row 1 and `M-c 1` goes there. Trivial change to `sort_key`; note the stable-order merge means it only affects the initial order. — DONE 2026-09-07 (undated blocked rows sort after dated ones).

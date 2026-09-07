@@ -147,10 +147,15 @@ fn draw_footer(frame: &mut Frame, area: Rect, app: &App) {
 
 fn row(agent: &Agent, label_width: usize, row_width: usize) -> ListItem<'_> {
     let state = State::from(agent.status);
+    let (glyph_style, word) = if agent.is_stale() {
+        (state.style().add_modifier(Modifier::DIM), "stale?")
+    } else {
+        (state.style(), state.word())
+    };
     let mut spans = vec![
-        Span::styled(state.glyph(), state.style()),
+        Span::styled(state.glyph(), glyph_style),
         Span::raw(" "),
-        Span::styled(format!("{:<WORD_WIDTH$}", state.word()), dim()),
+        Span::styled(format!("{word:<WORD_WIDTH$}"), dim()),
         Span::raw("  "),
         Span::styled(
             format!("{:<label_width$}", agent.label),

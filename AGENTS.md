@@ -67,6 +67,10 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   are drawn. A failed capture (pane vanished mid-tick) means no preview, never
   an exit. `p` toggles it for the life of the popup; the choice is not
   persisted.
+- **Stale rows**: a working agent whose `statusUpdatedAt` is older than
+  `agents::STALE_AFTER` (30 min) renders the word `stale?` with a dimmed glyph.
+  It still sorts and counts as working; the registry has no hung-process signal,
+  so this is a hint, not a state.
 - **Title stripping** removes any leading non-alphanumeric glyph plus space
   (Claude uses `✳` and spinner glyphs); a plain hostname title becomes `None`
   and the row falls back to `~/cwd`.

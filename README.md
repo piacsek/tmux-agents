@@ -15,6 +15,9 @@ When the popup is at least 100 columns wide the right half previews the
 selected pane (`capture-pane`, refreshed every tick), so a permission prompt or
 question can be read without switching to it.
 
+A working row whose status has not changed for 30 minutes reads `stale?`, the
+usual sign of a hung session worth killing with `x`.
+
 Keys: `j/k` move, `1-9` focus a row, `/` filter, `Enter` focus pane,
 `n` new Claude pane, `x` kill pane (asks `y/n`), `p` toggle preview, `?` help,
 `q` quit.
