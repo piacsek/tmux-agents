@@ -110,15 +110,21 @@ chrome="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 render() {
   local name="$1"
+  shift
   local svg="$home/$name.svg"
   [ -s "$home/$name.ansi" ] || { echo "empty capture for $name" >&2; exit 1; }
   if [ -z "$chrome" ]; then
     freeze "$home/$name.ansi" -o "$out/$name.png" --theme catppuccin-mocha \
-      --font.size 14 --padding 20 --margin 0 --window </dev/null
+      --font.size 14 --margin 0 "$@" </dev/null
     return
   fi
   freeze "$home/$name.ansi" -o "$svg" --theme catppuccin-mocha "${font[@]}" \
-    --font.family "FiraCode Nerd Font" --font.size 14 --padding 20,64,20,20 --margin 0 --window </dev/null
+    --font.family "FiraCode Nerd Font" --font.size 14 --margin 0 "$@" </dev/null
+  if [ -n "${CANVAS:-}" ]; then
+    local orig
+    orig="$(grep -o 'height="[0-9.]*"' "$svg" | head -1)"
+    perl -pi -e "s/fill=\"#1e1e2e\"/fill=\"$CANVAS\"/; s/$orig/height=\"${STRIP_HEIGHT:-45}.00\"/g" "$svg"
+  fi
   local w h
   w="$(grep -o 'width="[0-9.]*"' "$svg" | head -1 | grep -o '[0-9]*' | head -1)"
   h="$(grep -o 'height="[0-9.]*"' "$svg" | head -1 | grep -o '[0-9]*' | head -1)"
@@ -133,7 +139,7 @@ shoot() {
   t respawn-pane -k -t "$shot_window" -e "HOME=$home" -e "XDG_CONFIG_HOME=$home/.config" "$bin"
   sleep 1.5
   t capture-pane -e -p -t "$shot_window" | python3 "$home/truecolor.py" >"$home/$name.ansi"
-  render "$name"
+  render "$name" --padding 20,64,20,20 --window
 }
 
 shoot picker  90 10 $'[preview]\nenabled = false\n'
@@ -146,14 +152,14 @@ t set -t status status-interval 1
 t set -t status status-style "bg=#313244,fg=#cdd6f4"
 t set -t status status-left " #[bold]demo#[default] "
 t set -t status status-left-length 20
-t set -t status status-right " #($status_widget) #[fg=#6c7086]│#[default] 12:34 "
+t set -t status status-right " #($status_widget) "
 t set -t status status-right-length 80
 t set -t status window-status-format " #W "
 t set -t status window-status-current-format " #W "
 t resize-window -t "$shot_window" -x 100 -y 3
 t respawn-pane -k -t "$shot_window" -e TMUX= tmux -L "$sock" -f /dev/null attach -t status
 sleep 2.5
-t capture-pane -e -p -t "$shot_window" | tail -1 | python3 "$home/truecolor.py" >"$home/status.ansi"
+printf '%s' "$(t capture-pane -e -p -t "$shot_window" | tail -1 | python3 "$home/truecolor.py")" >"$home/status.ansi"
 t kill-session -t status
-render status
+CANVAS="#313244" render status --padding 12,64,12,20
 echo "wrote $out/picker.png $out/preview.png $out/status.png"
