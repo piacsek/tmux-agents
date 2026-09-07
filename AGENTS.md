@@ -115,9 +115,15 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
 
 ## Documentation rule
 
-`README.md` embeds `docs/picker.png` and `docs/preview.png`. After any visible
-layout change run `scripts/screenshots.sh` (needs `brew install
-charmbracelet/tap/freeze`) and commit the new images. The script never reads
+`README.md` embeds `docs/picker.png`, `docs/preview.png` and `docs/status.png`.
+After any visible layout change run `scripts/screenshots.sh` (needs `brew
+install charmbracelet/tap/freeze`, Google Chrome, and the FiraCode Nerd Font in
+`~/Library/Fonts`) and commit the new images. Freeze only lays out an SVG with
+the font embedded; headless Chrome rasterises it, because freeze's own PNG
+output goes blank with any non-default font and cannot draw Nerd Font glyphs.
+The status-line shot attaches an inner tmux client to a second session inside a
+pane and captures that pane's last row, since `capture-pane` never includes the
+status bar. The script never reads
 `~/.claude`: it uses a tempdir `HOME`, a private tmux socket (`-L`, `-f
 /dev/null`) and invented session names, so real sessions cannot leak into the
 README. Do not screenshot a live server.
