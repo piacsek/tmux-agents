@@ -16,7 +16,7 @@ agents: it runs `<cmd>` at most once per TTL and serves the cached stdout.
 
 ```
 src/main.rs      CLI dispatch, event loop wiring (event::poll → Input::Tick every 500 ms)
-src/cli.rs       `tmux-agents` (TUI) | `status` | `watch` | `config` | `cached <ttl> -- <cmd>`
+src/cli.rs       `tmux-agents` (TUI) | `status` | `watch` | `config` | `cached <ttl> -- <cmd>` | `--help` | `--version`
 src/config.rs    Config (serde + toml), defaults, XDG path resolution, `label_map`
 scripts/homebrew-formula.sh   prints the tap formula for a released version
 scripts/screenshots.sh        renders docs/*.png from a private tmux server + fixture registry
@@ -53,6 +53,8 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
 
 ## Behaviour that is easy to break
 
+- **`--help`/`-h`/`help` and `--version`/`-V`/`version`** print to stdout and
+  exit 0 before the config is read, so a broken config never hides them.
 - **Config is loaded before any subcommand runs.** Missing file = `Config::default()`;
   an unreadable file or unknown key is a hard error naming the file (`deny_unknown_fields`
   on every table). `tmux-agents config` prints the effective TOML and doubles as the

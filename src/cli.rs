@@ -1,7 +1,8 @@
 use std::time::Duration;
 
 pub const USAGE: &str =
-    "usage: tmux-agents [status | watch | config | cached <ttl-seconds> -- <command> [args...]]";
+    "usage: tmux-agents [status | watch | config | cached <ttl-seconds> -- <command> [args...]]
+       tmux-agents --help | --version";
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Command {
@@ -10,6 +11,8 @@ pub enum Command {
     Watch,
     Config,
     Cached { ttl: Duration, command: Vec<String> },
+    Help,
+    Version,
 }
 
 pub fn parse<I, S>(args: I) -> Result<Command, String>
@@ -24,6 +27,8 @@ where
         Some("watch") => Ok(Command::Watch),
         Some("config") => Ok(Command::Config),
         Some("cached") => parse_cached(args),
+        Some("--help" | "-h" | "help") => Ok(Command::Help),
+        Some("--version" | "-V" | "version") => Ok(Command::Version),
         Some(arg) => Err(format!("unknown argument '{arg}'\n{USAGE}")),
     }
 }
@@ -81,6 +86,14 @@ mod tests {
     #[test]
     fn watch_subcommand_is_recognised() {
         assert_eq!(parse(["watch"]), Ok(Command::Watch));
+    }
+
+    #[test]
+    fn help_and_version_flags_are_recognised() {
+        assert_eq!(parse(["--help"]), Ok(Command::Help));
+        assert_eq!(parse(["-h"]), Ok(Command::Help));
+        assert_eq!(parse(["--version"]), Ok(Command::Version));
+        assert_eq!(parse(["-V"]), Ok(Command::Version));
     }
 
     #[test]

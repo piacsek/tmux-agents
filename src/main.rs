@@ -16,6 +16,14 @@ use tmux_agents::watch::Claim;
 
 fn main() -> ExitCode {
     let command = match cli::parse(env::args().skip(1)) {
+        Ok(Command::Help) => {
+            println!("{}", cli::USAGE);
+            return ExitCode::SUCCESS;
+        }
+        Ok(Command::Version) => {
+            println!("tmux-agents {}", env!("CARGO_PKG_VERSION"));
+            return ExitCode::SUCCESS;
+        }
         Ok(command) => command,
         Err(err) => return fail(&err),
     };
@@ -32,6 +40,7 @@ fn main() -> ExitCode {
             Ok(())
         }
         Command::Cached { ttl, command } => cached(ttl, &command),
+        Command::Help | Command::Version => Ok(()),
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
