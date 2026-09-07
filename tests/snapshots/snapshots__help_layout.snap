@@ -9,4 +9,4 @@ gg / G   first / last
 Enter    focus pane                                         
 n        new Claude pane                                    
 q / Esc  close                                              
-tmux-agents v0.1.0                   press ? for keybindings
+tmux-agents v0.2.0                   press ? for keybindings

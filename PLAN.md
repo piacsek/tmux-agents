@@ -325,7 +325,7 @@ Ranked by value. Suggested order: 5, 8, 7, 4, 3, 2, 1, then decide on 6 and 9.
 
 ### Polish
 7. **Oldest blocked first.** Within the blocked group sort by age descending so the most neglected prompt is row 1 and `M-c 1` goes there. Trivial change to `sort_key`; note the stable-order merge means it only affects the initial order.
-8. **Version 0.2.0.** Help footer shows `v0.1.0` while the feature set has doubled. Trivial.
+8. **Version 0.2.0.** Help footer shows `v0.1.0` while the feature set has doubled. Trivial. — DONE 2026-09-07.
 
 ### Bigger, discuss first
 9. **Proactive alert.** `tmux-agents watch`: long-lived process that runs `tmux display-message "◉ dotfiles needs input"` on the idle/busy → blocked transition. Needs a launcher (launchd, or `run-shell -b` at tmux start), debouncing, and a decision on whether the status line already covers it. Only worth it if prompts are being missed today.
