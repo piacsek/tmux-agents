@@ -28,7 +28,11 @@ fn segment(state: State, members: &[&Agent]) -> String {
         State::Blocked => blocked_names(members),
         _ => members.len().to_string(),
     };
-    format!("#[{}]{} {body}#[default]", state.tmux_style(), state.glyph())
+    format!(
+        "#[{}]{} {body}#[default]",
+        state.tmux_style(),
+        state.glyph()
+    )
 }
 
 fn blocked_names(members: &[&Agent]) -> String {
