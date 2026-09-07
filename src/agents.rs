@@ -59,8 +59,36 @@ pub fn discover(
             })
         })
         .collect();
+    disambiguate(&mut agents);
     agents.sort_by(|a, b| sort_key(a).cmp(&sort_key(b)));
     agents
+}
+
+fn disambiguate(agents: &mut [Agent]) {
+    let base: Vec<String> = agents.iter().map(|agent| agent.label.clone()).collect();
+    let suffixes: [&dyn Fn(&Agent) -> String; 2] =
+        [&|agent| agent.window_index.to_string(), &|agent| {
+            agent.pane.0.clone()
+        }];
+    for suffix in suffixes {
+        let duplicated = duplicated_labels(agents);
+        for (index, agent) in agents.iter_mut().enumerate() {
+            if duplicated[index] {
+                agent.label = format!("{}:{}", base[index], suffix(agent));
+            }
+        }
+    }
+}
+
+fn duplicated_labels(agents: &[Agent]) -> Vec<bool> {
+    let mut seen: HashMap<&str, usize> = HashMap::new();
+    for agent in agents {
+        *seen.entry(agent.label.as_str()).or_default() += 1;
+    }
+    agents
+        .iter()
+        .map(|agent| seen[agent.label.as_str()] > 1)
+        .collect()
 }
 
 fn sort_key(agent: &Agent) -> (State, Reverse<Option<Duration>>, &str, u32) {

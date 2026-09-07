@@ -122,7 +122,7 @@ fn records_with_dead_pids_are_dropped() {
 }
 
 #[test]
-fn labels_stay_plain_basenames_even_when_they_collide() {
+fn labels_colliding_within_one_window_fall_back_to_the_pane_id() {
     let panes = vec![
         pane("%1", "work", 3, ""),
         pane("%2", "work", 3, ""),
@@ -139,7 +139,7 @@ fn labels_stay_plain_basenames_even_when_they_collide() {
         .map(|a| a.label)
         .collect();
 
-    assert_eq!(labels, vec!["dotfiles", "webapp", "webapp"]);
+    assert_eq!(labels, vec!["dotfiles", "webapp:%1", "webapp:%2"]);
 }
 
 #[test]
@@ -305,4 +305,25 @@ fn a_configured_label_for_the_exact_cwd_replaces_the_basename() {
         .collect();
 
     assert_eq!(names, vec!["agents", "other"]);
+}
+
+#[test]
+fn agents_sharing_a_label_are_told_apart_by_window_index() {
+    let records = vec![
+        record(1, "/work/webapp", Some("main:@1.%1")),
+        record(2, "/home/webapp", Some("main:@5.%5")),
+        record(3, "/home/dotfiles", Some("main:@7.%7")),
+    ];
+    let panes = vec![
+        pane("%1", "main", 1, ""),
+        pane("%5", "main", 5, ""),
+        pane("%7", "main", 7, ""),
+    ];
+
+    let labels: Vec<String> = discover(records, &panes, &alive, NOW, &no_labels())
+        .into_iter()
+        .map(|agent| agent.label)
+        .collect();
+
+    assert_eq!(labels, vec!["webapp:1", "webapp:5", "dotfiles"]);
 }

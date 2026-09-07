@@ -67,6 +67,10 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
 - **Draw before the first read.** `run()` renders, then waits for input. The
   popup was blank until a keypress once; `tests/e2e.rs` guards it by running the
   real binary in a scratch tmux server and capturing the pane.
+- **Duplicate labels get `:<window_index>`** in `agents::disambiguate`, so two
+  checkouts named `webapp` read `webapp:1` and `webapp:5` in the list, the
+  kill prompt and the status line. Two in the same window fall back to the
+  pane id (`webapp:%1`). Unique labels are untouched.
 - **Rows are numbered 1-9** in a dim column after the highlight, matching the
   digit keys; the tenth row onwards shows a blank slot. Numbers follow the
   visible (filtered) list, exactly like the keys do.

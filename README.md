@@ -16,6 +16,8 @@ pane, `x` kill (asks `y/n`), `p` toggle preview, `?` help, `q` quit.
 - **Preview**: `p` shows the selected pane's screen on the right (popups ≥ 100
   columns). Off by default; see `[preview]` below.
 - **Stale**: a working row unchanged for 30 min reads `stale?`.
+- **Labels**: the cwd basename (or a `[labels]` entry); duplicates get
+  `:<window index>`.
 - **Status line**: blocked sessions by name, the rest as counts.
 - **Watch**: flashes `◉ <session>: <reason>` in every client when a session
   becomes blocked.
