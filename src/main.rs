@@ -73,10 +73,10 @@ fn tui(config: &Config) -> std::io::Result<()> {
     })
 }
 
-fn status(_config: &Config) -> std::io::Result<()> {
+fn status(config: &Config) -> std::io::Result<()> {
     let tmux = CliTmux::default();
     let agents = agent_source(&tmux)()?;
-    println!("{}", render(&agents));
+    println!("{}", render(&agents, &config.status));
     Ok(())
 }
 

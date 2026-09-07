@@ -1,31 +1,35 @@
 use crate::agents::Agent;
+use crate::config::StatusLine;
 use crate::state::State;
 
 const ORDER: [State; 4] = [State::Blocked, State::Working, State::Idle, State::Unknown];
-const CLAUDE_GLYPH: &str = "#[fg=white]\u{F0674}#[default]";
-const NAMED_BLOCKED: usize = 2;
 
-pub fn render(agents: &[Agent]) -> String {
-    if agents.is_empty() {
-        return format!("{CLAUDE_GLYPH}  #[dim]none#[default]");
+pub fn render(agents: &[Agent], config: &StatusLine) -> String {
+    let body = if agents.is_empty() {
+        "#[dim]none#[default]".to_string()
+    } else {
+        ORDER
+            .into_iter()
+            .filter_map(|state| {
+                let members: Vec<&Agent> = agents
+                    .iter()
+                    .filter(|agent| State::from(agent.status) == state)
+                    .collect();
+                (!members.is_empty()).then(|| segment(state, &members, config.named_blocked))
+            })
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    if config.prefix.is_empty() {
+        body
+    } else {
+        format!("{}  {body}", config.prefix)
     }
-    let segments = ORDER
-        .into_iter()
-        .filter_map(|state| {
-            let members: Vec<&Agent> = agents
-                .iter()
-                .filter(|agent| State::from(agent.status) == state)
-                .collect();
-            (!members.is_empty()).then(|| segment(state, &members))
-        })
-        .collect::<Vec<_>>()
-        .join(" ");
-    format!("{CLAUDE_GLYPH}  {segments}")
 }
 
-fn segment(state: State, members: &[&Agent]) -> String {
+fn segment(state: State, members: &[&Agent], named_blocked: usize) -> String {
     let body = match state {
-        State::Blocked => blocked_names(members),
+        State::Blocked if named_blocked > 0 => blocked_names(members, named_blocked),
         _ => members.len().to_string(),
     };
     format!(
@@ -35,14 +39,14 @@ fn segment(state: State, members: &[&Agent]) -> String {
     )
 }
 
-fn blocked_names(members: &[&Agent]) -> String {
+fn blocked_names(members: &[&Agent], named: usize) -> String {
     let mut parts: Vec<String> = members
         .iter()
-        .take(NAMED_BLOCKED)
+        .take(named)
         .map(|agent| agent.label.clone())
         .collect();
-    if members.len() > NAMED_BLOCKED {
-        parts.push(format!("+{}", members.len() - NAMED_BLOCKED));
+    if members.len() > named {
+        parts.push(format!("+{}", members.len() - named));
     }
     parts.join(" ")
 }
