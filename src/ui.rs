@@ -20,6 +20,8 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         draw_help(frame, body);
     } else if app.agents.is_empty() {
         draw_empty(frame, body);
+    } else if let (Some(query), true) = (app.filter(), app.visible().is_empty()) {
+        draw_no_matches(frame, body, query);
     } else if let Some(lines) = preview_lines(app, body) {
         let split = Constraint::Percentage(app.config.preview.split_percent);
         let [list, preview] = Layout::horizontal([split, Constraint::Fill(1)]).areas(body);
@@ -62,6 +64,13 @@ fn draw_empty(frame: &mut Frame, area: Rect) {
         Line::from(Span::styled("n new Claude pane  q close", dim())),
     ];
     frame.render_widget(Paragraph::new(text), area);
+}
+
+fn draw_no_matches(frame: &mut Frame, area: Rect, query: &str) {
+    frame.render_widget(
+        Paragraph::new(Span::styled(format!("no matches for /{query}"), dim())),
+        area,
+    );
 }
 
 const KEYS: [(&str, &str); 10] = [
@@ -126,7 +135,15 @@ fn draw_footer(frame: &mut Frame, area: Rect, app: &App) {
             let version = format!("tmux-agents v{}", env!("CARGO_PKG_VERSION"));
             frame.render_widget(Paragraph::new(Span::styled(version, dim())), left);
         }
-        Mode::Filter(query) => frame.render_widget(Paragraph::new(format!("/{query}")), left),
+        Mode::Filter(query) => {
+            let count = format!("{}/{}", app.visible().len(), app.agents.len());
+            let line = Line::from(vec![
+                Span::raw(format!("/{query}")),
+                Span::raw("  "),
+                Span::styled(count, dim()),
+            ]);
+            frame.render_widget(Paragraph::new(line), left);
+        }
         Mode::Confirm(_) => {
             let label = app
                 .confirming()

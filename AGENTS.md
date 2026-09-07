@@ -71,6 +71,9 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   checkouts named `webapp` read `webapp:1` and `webapp:5` in the list, the
   kill prompt and the status line. Two in the same window fall back to the
   pane id (`webapp:%1`). Unique labels are untouched.
+- **Filter feedback.** The footer reads `/query  matches/total` while
+  filtering; zero matches replace the body with `no matches for /query`
+  (the "no sessions" view is only for an empty registry).
 - **Rows are numbered 1-9** in a dim column after the highlight, matching the
   digit keys; the tenth row onwards shows a blank slot. Numbers follow the
   visible (filtered) list, exactly like the keys do.

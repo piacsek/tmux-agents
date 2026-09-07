@@ -857,3 +857,37 @@ fn rows_are_numbered_to_match_the_digit_keys() {
     assert!(rows[8].starts_with("  9 ○ idle     p9"), "{screen}");
     assert!(rows[9].starts_with("    ○ idle     p10"), "{screen}");
 }
+
+#[test]
+fn a_filter_with_no_matches_says_so_and_esc_brings_the_rows_back() {
+    let mut picker = Picker::new(vec![agent("dotfiles", "%1"), agent("webapp", "%2")]);
+
+    picker
+        .run(vec![key(KeyCode::Char('/')), key(KeyCode::Char('z'))])
+        .unwrap();
+    let screen = picker.screen();
+    assert!(screen.contains("no matches for /z"), "{screen}");
+    assert!(!screen.contains("dotfiles"), "{screen}");
+
+    picker.run(vec![key(KeyCode::Esc)]).unwrap();
+    let screen = picker.screen();
+    assert!(screen.contains("> 1 ○ idle     dotfiles"), "{screen}");
+    assert!(!screen.contains("no matches"), "{screen}");
+}
+
+#[test]
+fn the_filter_footer_counts_matches_out_of_all_rows() {
+    let mut picker = Picker::new(vec![
+        agent("dotfiles", "%1"),
+        agent("webapp", "%2"),
+        agent("docs", "%3"),
+    ]);
+
+    picker
+        .run(vec![key(KeyCode::Char('/')), key(KeyCode::Char('d'))])
+        .unwrap();
+
+    let screen = picker.screen();
+    let footer = screen.lines().last().unwrap();
+    assert!(footer.starts_with("/d  2/3"), "{screen}");
+}
