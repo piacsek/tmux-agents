@@ -141,13 +141,34 @@ pub fn load(path: &Path) -> Result<Config, ConfigError> {
             });
         }
     };
-    toml::from_str(&text).map_err(|err| ConfigError {
+    let config: Config = toml::from_str(&text).map_err(|err| ConfigError {
         path: path.to_path_buf(),
         message: err.to_string().trim().to_string(),
-    })
+    })?;
+    config.validate().map_err(|message| ConfigError {
+        path: path.to_path_buf(),
+        message,
+    })?;
+    Ok(config)
 }
 
 impl Config {
+    fn validate(&self) -> Result<(), String> {
+        let positive = [
+            ("picker.tick_ms", self.picker.tick_ms),
+            ("watch.interval_ms", self.watch.interval_ms),
+        ];
+        for (key, value) in positive {
+            if value == 0 {
+                return Err(format!("{key} must be greater than 0"));
+            }
+        }
+        if !(1..=100).contains(&self.preview.split_percent) {
+            return Err("preview.split_percent must be between 1 and 100".to_string());
+        }
+        Ok(())
+    }
+
     pub fn to_toml(&self) -> String {
         toml::to_string_pretty(self).unwrap_or_default()
     }

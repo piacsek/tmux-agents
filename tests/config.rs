@@ -160,3 +160,21 @@ fn label_keys_expand_a_leading_tilde_against_home() {
         Some("why")
     );
 }
+
+#[test]
+fn out_of_range_values_fail_naming_the_key() {
+    let dir = tempfile::tempdir().unwrap();
+    let cases = [
+        ("[picker]\ntick_ms = 0\n", "tick_ms"),
+        ("[watch]\ninterval_ms = 0\n", "interval_ms"),
+        ("[preview]\nsplit_percent = 150\n", "split_percent"),
+        ("[preview]\nsplit_percent = 0\n", "split_percent"),
+    ];
+
+    for (text, key) in cases {
+        let err = load(&write(&dir, text)).unwrap_err().to_string();
+        assert!(err.contains("config.toml"), "{text}: {err}");
+        assert!(err.contains(key), "{text}: {err}");
+    }
+    assert!(load(&write(&dir, "[preview]\nsplit_percent = 100\n")).is_ok());
+}

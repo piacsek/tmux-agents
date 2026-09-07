@@ -57,7 +57,9 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   exit 0 before the config is read, so a broken config never hides them.
 - **Config is loaded before any subcommand runs.** Missing file = `Config::default()`;
   an unreadable file or unknown key is a hard error naming the file (`deny_unknown_fields`
-  on every table). `tmux-agents config` prints the effective TOML and doubles as the
+  on every table). `Config::validate` rejects `tick_ms = 0`, `interval_ms = 0`
+  (both would busy-loop spawning tmux) and a `split_percent` outside 1..=100,
+  naming the key. `tmux-agents config` prints the effective TOML and doubles as the
   reference. Constants that used to live in code (tick, stale threshold, preview
   width/split, status prefix, watch timings, new-pane command, labels) now come from
   `App::config`, `CliTmux::with_new_pane`, `status::render(_, &StatusLine)`,
