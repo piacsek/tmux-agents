@@ -19,6 +19,7 @@ src/main.rs      CLI dispatch, event loop wiring (event::poll → Input::Tick ev
 src/cli.rs       `tmux-agents` (TUI) | `status` | `watch` | `config` | `cached <ttl> -- <cmd>`
 src/config.rs    Config (serde + toml), defaults, XDG path resolution, `label_map`
 scripts/homebrew-formula.sh   prints the tap formula for a released version
+scripts/screenshots.sh        renders docs/*.png from a private tmux server + fixture registry
 src/watch.rs     Watcher (pure transition detector) + run() loop + pid lock for `watch`
 src/cached.rs    TTL cache for status-line widgets; key = hash of argv, freshness = file mtime
 src/registry.rs  lenient serde of ~/.claude/sessions/<pid>.json
@@ -113,6 +114,13 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   themes apply. Do not hardcode hex.
 
 ## Documentation rule
+
+`README.md` embeds `docs/picker.png` and `docs/preview.png`. After any visible
+layout change run `scripts/screenshots.sh` (needs `brew install
+charmbracelet/tap/freeze`) and commit the new images. The script never reads
+`~/.claude`: it uses a tempdir `HOME`, a private tmux socket (`-L`, `-f
+/dev/null`) and invented session names, so real sessions cannot leak into the
+README. Do not screenshot a live server.
 
 Whenever behaviour changes, check that `README.md` still covers it and is still
 true: a key, a default, a subcommand, a config key. The README must stay terse:

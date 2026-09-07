@@ -8,11 +8,7 @@ A tmux popup listing the Claude Code sessions in the current server, what each
 is doing, and a jump to its pane. Also a status-line segment and a blocked-alert
 watcher.
 
-```
-◉ blocked  webapp     permission prompt · Remove PR comments   4m
-● working  dotfiles   Tmux Claude Code session picker          1m
-○ idle     scintilla  ~/projects/scintilla.nvim                3d
-```
+![picker](docs/picker.png)
 
 Keys: `j/k` move, `1-9` focus row, `/` filter, `Enter` focus, `n` new Claude
 pane, `x` kill (asks `y/n`), `p` toggle preview, `?` help, `q` quit.
@@ -24,23 +20,31 @@ pane, `x` kill (asks `y/n`), `p` toggle preview, `?` help, `q` quit.
 - **Watch**: flashes `◉ <session>: <reason>` in every client when a session
   becomes blocked.
 
+![preview](docs/preview.png)
+
 ## Install
 
-Needs `tmux` on `PATH`; Homebrew installs it as a dependency.
+Homebrew (macOS, Linux), pulls in `tmux` if missing:
 
 ```sh
 brew install piacsek/tap/tmux-agents
 ```
 
-Without Homebrew (macOS arm64/x86_64, Linux x86_64), into `~/.local/bin`:
+Prebuilt binary (macOS arm64/x86_64, Linux x86_64) into `~/.local/bin`:
 
 ```sh
 mkdir -p ~/.local/bin && curl -fsSL "https://github.com/piacsek/tmux-agents/releases/latest/download/tmux-agents-$(uname -m | sed s/arm64/aarch64/)-$(uname -s | sed 's/Darwin/apple-darwin/;s/Linux/unknown-linux-gnu/').tar.gz" | tar xz -C ~/.local/bin
 ```
 
-From source: `cargo install --path . --root ~/.local --locked`.
+From source (needs Rust 1.98+):
 
-`~/.tmux.conf`:
+```sh
+cargo install --git https://github.com/piacsek/tmux-agents --locked
+```
+
+## Set up tmux
+
+Add to `~/.tmux.conf`, then `tmux source-file ~/.tmux.conf`:
 
 ```
 bind -n M-c display-popup -E -w 70% -h 60% "tmux-agents"
