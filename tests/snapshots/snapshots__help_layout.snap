@@ -13,4 +13,4 @@ p        toggle preview
 q / Esc  close                                              
 ?        toggle this help                                   
                                                             
-tmux-agents v0.3.2                   press ? for keybindings
+tmux-agents v0.4.0                   press ? for keybindings
