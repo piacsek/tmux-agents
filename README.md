@@ -34,11 +34,17 @@ Homebrew (macOS, Linux), pulls in `tmux` if missing:
 brew install piacsek/tap/tmux-agents
 ```
 
-Prebuilt binary (macOS arm64/x86_64, Linux x86_64) into `~/.local/bin`:
+Prebuilt binary (macOS arm64/x86_64, Linux x86_64) into `~/.local/bin`, checked
+against the release's SHA-256:
 
 ```sh
-mkdir -p ~/.local/bin && curl -fsSL "https://github.com/piacsek/tmux-agents/releases/latest/download/tmux-agents-$(uname -m | sed s/arm64/aarch64/)-$(uname -s | sed 's/Darwin/apple-darwin/;s/Linux/unknown-linux-gnu/').tar.gz" | tar xz -C ~/.local/bin
+t="tmux-agents-$(uname -m | sed s/arm64/aarch64/)-$(uname -s | sed 's/Darwin/apple-darwin/;s/Linux/unknown-linux-gnu/')"
+curl -fsSLO "https://github.com/piacsek/tmux-agents/releases/latest/download/$t.tar.gz{,.sha256}"
+shasum -a 256 -c "$t.tar.gz.sha256" && mkdir -p ~/.local/bin && tar xzf "$t.tar.gz" -C ~/.local/bin
 ```
+
+Releases also carry a GitHub build-provenance attestation:
+`gh attestation verify "$t.tar.gz" --repo piacsek/tmux-agents`.
 
 From source (needs Rust 1.98+):
 
@@ -59,6 +65,11 @@ run-shell -b "tmux-agents watch"
 
 `cached <ttl-seconds> -- <command>` reruns a widget at most once per TTL so the
 1s interval stays cheap; a failing command is shown but not cached. `watch` runs one instance per server and exits with it.
+
+Sessions come from Claude Code's registry at `~/.claude/sessions/`, or
+`$CLAUDE_CONFIG_DIR/sessions`. tmux runs `#()` and `run-shell` with the
+server's environment, so a `CLAUDE_CONFIG_DIR` exported only in your shell
+needs `set-environment -g CLAUDE_CONFIG_DIR <dir>` in `.tmux.conf` too.
 
 ## Configure
 
@@ -98,8 +109,7 @@ direction = "horizontal"   # or "vertical"
 ## Develop
 
 `cargo test`, plus `cargo test -- --ignored` for tests that start a real tmux
-server. Sessions come from Claude Code's registry at `~/.claude/sessions/`.
-Details and gotchas in `AGENTS.md`.
+server. Details and gotchas in `AGENTS.md`.
 
 ## License
 

@@ -220,7 +220,14 @@ carry no version so the README's `releases/latest/download/` one-liner stays
 valid; do not rename them. Both macOS targets build on `macos-latest` (the Intel
 one cross-compiled); the `macos-13` runner label is retired and a job asking for
 it queues forever. The workflow
-refuses a tag whose version differs from `Cargo.toml`.
+refuses a tag whose version differs from `Cargo.toml`. Every action in both
+workflows is pinned to a commit SHA with the tag in a trailing comment; bump
+pins by resolving the tag with `gh api repos/<owner>/<repo>/git/ref/tags/<tag>`
+(dereference annotated tags via `git/tags/<sha>`). Workflows default to
+`contents: read`; only `publish` gets `contents: write` plus `id-token` and
+`attestations: write` for `actions/attest-build-provenance`, which is what makes
+`gh attestation verify <tarball> --repo piacsek/tmux-agents` work. CI also runs
+`rustsec/audit-check` (`cargo audit`) as a separate job.
 
 1. Bump `version` in `Cargo.toml` (`Cargo.lock` follows on the next build) and
    refresh the help snapshot: `INSTA_UPDATE=always cargo test --test snapshots`.
