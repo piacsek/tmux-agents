@@ -10,8 +10,9 @@ watcher.
 
 ![picker](docs/picker.png)
 
-Keys: `j/k` move, `1-9` focus the numbered row, `/` filter, `Enter` focus, `n` new Claude
-pane, `x` kill (asks `y/n`), `p` toggle preview, `?` help, `q` quit.
+Keys: `j/k` move, `1-9` focus the numbered row, `/` filter, `Enter` focus,
+`n` new Claude pane, `x` kill (asks `y/n`), `p` toggle preview, `?` help,
+`q` quit. Failed tmux actions show in the footer; the popup stays open.
 
 - **Preview**: `p` shows the selected pane's screen on the right (popups ≥ 100
   columns). Off by default; see `[preview]` below.
@@ -63,7 +64,9 @@ run-shell -b "tmux-agents watch"
 ```
 
 `cached <ttl-seconds> -- <command>` reruns a widget at most once per TTL so the
-1s interval stays cheap; a failing command is shown but not cached. `watch` runs one instance per server and exits with it.
+1s interval stays cheap; a failing command is shown but not cached. `watch`
+runs one instance per server and exits with it. `tmux-agents --help` lists the
+subcommands, `--version` the version.
 
 Sessions come from Claude Code's registry at `~/.claude/sessions/`, or
 `$CLAUDE_CONFIG_DIR/sessions`. tmux runs `#()` and `run-shell` with the
@@ -74,7 +77,9 @@ needs `set-environment -g CLAUDE_CONFIG_DIR <dir>` in `.tmux.conf` too.
 
 `~/.config/tmux-agents/config.toml` (or `$XDG_CONFIG_HOME`, or
 `$TMUX_AGENTS_CONFIG`). Every key is optional; `tmux-agents config` prints the
-effective values. Unknown keys are an error.
+effective values. An unknown key or out-of-range value is reported on stderr,
+in the popup footer, and as `⚠ config` in the status line; defaults apply
+until it is fixed.
 
 ```toml
 [picker]
