@@ -209,14 +209,43 @@ fn a_wide_binary_previews_the_registered_panes_content() {
 
 #[test]
 #[ignore = "needs a tmux binary; run with --ignored"]
+fn a_broken_config_shows_in_the_popup_footer_with_the_rows_still_listed() {
+    let server = Server::start("badconfig");
+    let home = fixture_home(&server);
+    let config = home.path().join("config.toml");
+    fs::write(&config, "[preview]\nenable = true\n").unwrap();
+
+    server.respawn(
+        &[
+            ("HOME", home.path().to_str().unwrap()),
+            ("TMUX_AGENTS_CONFIG", config.to_str().unwrap()),
+        ],
+        env!("CARGO_BIN_EXE_tmux-agents"),
+    );
+    let screen = server.wait_for_screen("fixture-project");
+
+    assert!(
+        screen.contains("> 1 ● working  fixture-project"),
+        "{screen}"
+    );
+    let footer = screen.lines().rfind(|l| !l.trim().is_empty()).unwrap();
+    assert!(footer.contains("config.toml"), "{screen}");
+    assert!(footer.contains("enable"), "{screen}");
+}
+
+#[test]
+#[ignore = "needs a tmux binary; run with --ignored"]
 fn watch_holds_a_single_lock_and_exits_when_the_server_dies() {
     let server = Server::start("watch");
     let home = fixture_home(&server);
+    let config = home.path().join("config.toml");
+    fs::write(&config, "[watch]\nintervall_ms = 5\n").unwrap();
     let tmux_env = format!("{},0,0", server.socket_path());
     let spawn = || {
         Command::new(env!("CARGO_BIN_EXE_tmux-agents"))
             .arg("watch")
             .env("HOME", home.path())
+            .env("TMUX_AGENTS_CONFIG", &config)
             .env("XDG_CACHE_HOME", home.path().join("cache"))
             .env("TMUX", &tmux_env)
             .stderr(std::process::Stdio::piped())
@@ -262,5 +291,10 @@ fn watch_holds_a_single_lock_and_exits_when_the_server_dies() {
         !locks[0].path().exists(),
         "lock left behind: {}",
         locks[0].path().display()
+    );
+    let stderr = String::from_utf8_lossy(&first.wait_with_output().unwrap().stderr).into_owned();
+    assert!(
+        stderr.contains("config.toml") && stderr.contains("intervall_ms"),
+        "watch should run on defaults and report the broken config: {stderr}"
     );
 }

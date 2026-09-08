@@ -130,13 +130,28 @@ fn the_binary_prints_the_effective_config_and_rejects_a_broken_file() {
     assert!(!printed.preview.enabled);
 
     let bad = write(&dir, "[preview]\nenable = true\n");
-    for args in [&["config"][..], &["status"][..]] {
-        let out = binary(&bad, args);
-        assert!(!out.status.success(), "{args:?} should fail");
-        let stderr = String::from_utf8_lossy(&out.stderr);
-        assert!(stderr.contains("config.toml"), "{stderr}");
-        assert!(stderr.contains("enable"), "{stderr}");
-    }
+    let out = binary(&bad, &["config"]);
+    assert!(!out.status.success(), "config should fail");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.contains("config.toml"), "{stderr}");
+    assert!(stderr.contains("enable"), "{stderr}");
+}
+
+#[test]
+fn the_status_line_flags_a_broken_config_instead_of_going_blank() {
+    let dir = tempfile::tempdir().unwrap();
+    let bad = write(&dir, "[preview]\nenable = true\n");
+
+    let out = binary(&bad, &["status"]);
+
+    assert!(out.status.success(), "status should still print");
+    assert_eq!(
+        String::from_utf8_lossy(&out.stdout),
+        "#[fg=red,bold]⚠ config#[default]\n"
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.contains("config.toml"), "{stderr}");
+    assert!(stderr.contains("enable"), "{stderr}");
 }
 
 #[test]
@@ -178,4 +193,17 @@ fn out_of_range_values_fail_naming_the_key() {
         assert!(err.contains(key), "{text}: {err}");
     }
     assert!(load(&write(&dir, "[preview]\nsplit_percent = 100\n")).is_ok());
+}
+
+#[test]
+fn a_config_error_summarises_to_one_line_with_the_file_name_and_reason() {
+    let dir = tempfile::tempdir().unwrap();
+
+    let err = load(&write(&dir, "[preview]\nenable = true\n")).unwrap_err();
+    let summary = err.summary();
+
+    assert!(summary.starts_with("config.toml: "), "{summary}");
+    assert!(summary.contains("enable"), "{summary}");
+    assert!(!summary.contains('\n'), "{summary}");
+    assert!(!summary.contains(dir.path().to_str().unwrap()), "{summary}");
 }

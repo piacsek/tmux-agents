@@ -891,3 +891,21 @@ fn the_filter_footer_counts_matches_out_of_all_rows() {
     let footer = screen.lines().last().unwrap();
     assert!(footer.starts_with("/d  2/3"), "{screen}");
 }
+
+#[test]
+fn a_failed_tmux_action_shows_the_error_in_the_footer_and_keeps_the_popup_open() {
+    let mut picker = Picker::new(vec![agent("dotfiles", "%1"), agent("webapp", "%2")]);
+    picker.tmux.fail_actions();
+
+    picker.run(vec![key(KeyCode::Enter)]).unwrap();
+    let screen = picker.screen();
+    assert!(screen.contains("> 1 ○ idle     dotfiles"), "{screen}");
+    let footer = screen.lines().last().unwrap();
+    assert!(footer.starts_with("can't find pane: %9"), "{screen}");
+    assert!(picker.tmux.focused().is_empty());
+
+    picker.run(vec![key(KeyCode::Char('j'))]).unwrap();
+    let screen = picker.screen();
+    assert!(!screen.contains("can't find pane"), "{screen}");
+    assert!(screen.contains("> 2 ○ idle     webapp"), "{screen}");
+}

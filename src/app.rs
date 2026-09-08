@@ -41,6 +41,7 @@ pub struct App {
     pub preview: Option<Vec<String>>,
     pub preview_enabled: bool,
     pub config: Config,
+    pub error: Option<String>,
     pending_g: bool,
 }
 
@@ -54,6 +55,7 @@ impl App {
             preview: None,
             preview_enabled: config.preview.enabled,
             config,
+            error: None,
             pending_g: false,
         }
     }
@@ -92,6 +94,7 @@ impl App {
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Action {
+        self.error = None;
         if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
             return Action::Quit;
         }
@@ -180,6 +183,16 @@ impl App {
     }
 }
 
+fn attempt(app: &mut App, result: io::Result<()>) -> bool {
+    match result {
+        Ok(()) => true,
+        Err(err) => {
+            app.error = Some(err.to_string());
+            false
+        }
+    }
+}
+
 fn merge_keeping_order(current: Vec<Agent>, fresh: Vec<Agent>) -> Vec<Agent> {
     let mut fresh = fresh;
     let mut merged: Vec<Agent> = current
@@ -235,11 +248,20 @@ where
             Input::Tick => app.refresh(source()?),
             Input::Key(key) => match app.handle_key(key) {
                 Action::Quit => return Ok(()),
-                Action::Focus(pane) => return tmux.focus(&pane),
-                Action::NewClaudePane => return tmux.new_claude_pane(),
+                Action::Focus(pane) => {
+                    if attempt(app, tmux.focus(&pane)) {
+                        return Ok(());
+                    }
+                }
+                Action::NewClaudePane => {
+                    if attempt(app, tmux.new_claude_pane()) {
+                        return Ok(());
+                    }
+                }
                 Action::Kill(pane) => {
-                    tmux.kill_pane(&pane)?;
-                    app.refresh(source()?);
+                    if attempt(app, tmux.kill_pane(&pane)) {
+                        app.refresh(source()?);
+                    }
                 }
                 Action::Continue => {}
             },

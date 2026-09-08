@@ -57,8 +57,11 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
 - **`--help`/`-h`/`help` and `--version`/`-V`/`version`** print to stdout and
   exit 0 before the config is read, so a broken config never hides them.
 - **Config is loaded before any subcommand runs.** Missing file = `Config::default()`;
-  an unreadable file or unknown key is a hard error naming the file (`deny_unknown_fields`
-  on every table). `Config::validate` rejects `tick_ms = 0`, `interval_ms = 0`
+  an unreadable file or unknown key is an error naming the file (`deny_unknown_fields`
+  on every table), always printed to stderr. Only `config` exits 1 on it: `status`
+  prints `#[fg=red,bold]⚠ config#[default]` so the segment never goes blank, the
+  TUI runs on defaults with the error in the footer until the first key, `watch`
+  runs on defaults, and `cached` ignores the config entirely. `Config::validate` rejects `tick_ms = 0`, `interval_ms = 0`
   (both would busy-loop spawning tmux) and a `split_percent` outside 1..=100,
   naming the key. `tmux-agents config` prints the effective TOML and doubles as the
   reference. Constants that used to live in code (tick, stale threshold, preview
@@ -67,6 +70,11 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   `watch::run(_, _, _, &Watch)` and `discover(_, _, _, _, &labels)`. Preview is **off**
   by default; tests that need it pass a `Config` with `preview.enabled = true` via
   `Picker::with_config`, and the e2e preview test sets `TMUX_AGENTS_CONFIG`.
+- **tmux errors stay inside the popup.** A failed focus, new pane or kill sets
+  `App::error`, drawn red in the footer in place of the mode text; the next key
+  clears it and the popup stays open (a `display-popup -E` closes on exit, so an
+  error that exited was invisible). Only `source()` failures (tmux server gone)
+  still end `run()`.
 - **Draw before the first read.** `run()` renders, then waits for input. The
   popup was blank until a keypress once; `tests/e2e.rs` guards it by running the
   real binary in a scratch tmux server and capturing the pane.

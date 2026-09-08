@@ -22,6 +22,7 @@ pub struct FakeTmux {
     killed: RefCell<Vec<PaneId>>,
     captures: RefCell<HashMap<PaneId, Vec<String>>>,
     capture_fails: RefCell<bool>,
+    action_fails: RefCell<bool>,
     clients: RefCell<Vec<Client>>,
     messages: RefCell<Vec<(String, String, u64)>>,
 }
@@ -41,6 +42,17 @@ impl FakeTmux {
 
     pub fn fail_captures(&self) {
         *self.capture_fails.borrow_mut() = true;
+    }
+
+    pub fn fail_actions(&self) {
+        *self.action_fails.borrow_mut() = true;
+    }
+
+    fn action(&self) -> io::Result<()> {
+        if *self.action_fails.borrow() {
+            return Err(io::Error::other("can't find pane: %9"));
+        }
+        Ok(())
     }
 
     pub fn set_clients(&self, clients: &[(&str, &str)]) {
@@ -71,16 +83,19 @@ impl Tmux for FakeTmux {
     }
 
     fn focus(&self, pane: &PaneId) -> io::Result<()> {
+        self.action()?;
         self.focused.borrow_mut().push(pane.clone());
         Ok(())
     }
 
     fn new_claude_pane(&self) -> io::Result<()> {
+        self.action()?;
         *self.new_panes.borrow_mut() += 1;
         Ok(())
     }
 
     fn kill_pane(&self, pane: &PaneId) -> io::Result<()> {
+        self.action()?;
         self.killed.borrow_mut().push(pane.clone());
         Ok(())
     }

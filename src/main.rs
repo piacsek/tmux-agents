@@ -27,14 +27,22 @@ fn main() -> ExitCode {
         Ok(command) => command,
         Err(err) => return fail(&err),
     };
-    let config = match config::load(&config_path()) {
-        Ok(config) => config,
-        Err(err) => return fail(&err.to_string()),
+    let (config, config_error) = match config::load(&config_path()) {
+        Ok(config) => (config, None),
+        Err(err) => (Config::default(), Some(err)),
     };
+    if let Some(err) = &config_error {
+        eprintln!("tmux-agents: {err}");
+    }
     let result = match command {
-        Command::Tui => tui(&config),
+        Command::Tui => tui(&config, config_error.map(|err| err.summary())),
+        Command::Status if config_error.is_some() => {
+            println!("#[fg=red,bold]⚠ config#[default]");
+            Ok(())
+        }
         Command::Status => status(&config),
         Command::Watch => watch(&config),
+        Command::Config if config_error.is_some() => return ExitCode::FAILURE,
         Command::Config => {
             print!("{}", config.to_toml());
             Ok(())
@@ -65,10 +73,11 @@ fn fail(message: &str) -> ExitCode {
     ExitCode::FAILURE
 }
 
-fn tui(config: &Config) -> std::io::Result<()> {
+fn tui(config: &Config, config_error: Option<String>) -> std::io::Result<()> {
     let tmux = CliTmux::default().with_new_pane(config.new_pane.clone());
     let mut source = agent_source(&tmux, config);
     let mut app = App::new(source()?, config.clone());
+    app.error = config_error;
     let tick = Duration::from_millis(config.picker.tick_ms);
     ratatui::run(|terminal| {
         run(

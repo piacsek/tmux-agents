@@ -124,6 +124,22 @@ impl fmt::Display for ConfigError {
     }
 }
 
+impl ConfigError {
+    pub fn summary(&self) -> String {
+        let file = self
+            .path
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_else(|| self.path.display().to_string());
+        let reason = self
+            .message
+            .lines()
+            .rfind(|line| !line.trim().is_empty())
+            .unwrap_or_default();
+        format!("{file}: {reason}")
+    }
+}
+
 impl std::error::Error for ConfigError {}
 
 impl From<ConfigError> for io::Error {

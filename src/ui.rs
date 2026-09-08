@@ -131,6 +131,24 @@ fn draw_footer(frame: &mut Frame, area: Rect, app: &App) {
     let hint_width = HELP_HINT.chars().count() as u16;
     let [left, right] =
         Layout::horizontal([Constraint::Min(1), Constraint::Length(hint_width)]).areas(area);
+    if let Some(error) = &app.error {
+        frame.render_widget(
+            Paragraph::new(Span::styled(
+                error.as_str(),
+                Style::default().fg(Color::Red),
+            )),
+            left,
+        );
+    } else {
+        draw_mode(frame, left, app);
+    }
+    frame.render_widget(
+        Paragraph::new(Span::styled(HELP_HINT, dim())).right_aligned(),
+        right,
+    );
+}
+
+fn draw_mode(frame: &mut Frame, left: Rect, app: &App) {
     match &app.mode {
         Mode::Help => {
             let version = format!("tmux-agents v{}", env!("CARGO_PKG_VERSION"));
@@ -160,10 +178,6 @@ fn draw_footer(frame: &mut Frame, area: Rect, app: &App) {
         }
         Mode::Normal => {}
     }
-    frame.render_widget(
-        Paragraph::new(Span::styled(HELP_HINT, dim())).right_aligned(),
-        right,
-    );
 }
 
 fn row(
