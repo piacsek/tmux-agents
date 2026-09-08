@@ -802,43 +802,22 @@ fn n_and_esc_cancel_the_kill_and_return_to_the_list() {
 }
 
 #[test]
-fn working_rows_older_than_thirty_minutes_are_marked_stale_and_dimmed() {
-    let minutes = |m: u64| Some(std::time::Duration::from_secs(m * 60));
-    let mut stale = agent_with_status("a", "%1", Status::Busy);
-    stale.status_age = minutes(31);
-    let mut fresh = agent_with_status("b", "%2", Status::Busy);
-    fresh.status_age = minutes(29);
-    let mut blocked = agent_with_status("c", "%3", Status::Waiting);
-    blocked.status_age = minutes(120);
-    let mut picker = Picker::new(vec![stale, fresh, blocked]);
+fn a_long_running_working_row_is_still_plain_working() {
+    let hours = |h: u64| Some(std::time::Duration::from_secs(h * 3600));
+    let mut old = agent_with_status("a", "%1", Status::Busy);
+    old.status_age = hours(3);
+    let mut picker = Picker::new(vec![old]);
 
     picker.run(Vec::new()).unwrap();
 
     let screen = picker.screen();
-    let rows: Vec<&str> = screen.lines().take(3).collect();
-    assert!(rows[0].starts_with("> 1 ● stale?   a"), "{screen}");
-    assert!(rows[1].starts_with("  2 ● working  b"), "{screen}");
-    assert!(rows[2].starts_with("  3 ◉ blocked  c"), "{screen}");
-    assert_eq!(picker.cell(4, 0).fg, Color::Yellow);
-    assert!(picker.cell(4, 0).modifier.contains(Modifier::DIM));
-    assert!(!picker.cell(4, 1).modifier.contains(Modifier::DIM));
-}
-
-#[test]
-fn the_stale_threshold_comes_from_config() {
-    let mut config = tmux_agents::config::Config::default();
-    config.picker.stale_after_minutes = 5;
-    let mut working = agent_with_status("a", "%1", Status::Busy);
-    working.status_age = Some(std::time::Duration::from_secs(6 * 60));
-    let mut picker = Picker::with_config(vec![working], 60, 8, config);
-
-    picker.run(Vec::new()).unwrap();
-
+    assert!(screen.starts_with("> 1 ● working  a"), "{screen}");
+    assert!(!screen.contains("stale"), "{screen}");
     assert!(
-        picker.screen().starts_with("> 1 ● stale?"),
-        "{}",
-        picker.screen()
+        screen.lines().next().unwrap().trim_end().ends_with(" 3h"),
+        "{screen}"
     );
+    assert!(!picker.cell(4, 0).modifier.contains(Modifier::DIM));
 }
 
 #[test]

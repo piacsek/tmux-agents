@@ -21,15 +21,11 @@ pub struct Config {
 #[serde(default, deny_unknown_fields)]
 pub struct Picker {
     pub tick_ms: u64,
-    pub stale_after_minutes: u64,
 }
 
 impl Default for Picker {
     fn default() -> Self {
-        Self {
-            tick_ms: 500,
-            stale_after_minutes: 30,
-        }
+        Self { tick_ms: 500 }
     }
 }
 

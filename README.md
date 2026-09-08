@@ -15,7 +15,6 @@ pane, `x` kill (asks `y/n`), `p` toggle preview, `?` help, `q` quit.
 
 - **Preview**: `p` shows the selected pane's screen on the right (popups ≥ 100
   columns). Off by default; see `[preview]` below.
-- **Stale**: a working row unchanged for 30 min reads `stale?`.
 - **Labels**: the cwd basename (or a `[labels]` entry); duplicates get
   `:<window index>`.
 - **Status line**: blocked sessions by name, the rest as counts.
@@ -80,7 +79,6 @@ effective values. Unknown keys are an error.
 ```toml
 [picker]
 tick_ms = 500
-stale_after_minutes = 30
 
 [preview]
 enabled = false        # p toggles at runtime

@@ -21,12 +21,6 @@ pub struct Agent {
     pub waiting_for: Option<String>,
 }
 
-impl Agent {
-    pub fn is_stale(&self, after: Duration) -> bool {
-        State::from(self.status) == State::Working && self.status_age.is_some_and(|age| age > after)
-    }
-}
-
 pub fn discover(
     records: Vec<SessionRecord>,
     panes: &[PaneInfo],

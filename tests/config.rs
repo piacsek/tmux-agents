@@ -11,7 +11,6 @@ fn a_missing_file_yields_defaults_with_the_preview_off() {
     assert_eq!(config.preview.min_width, 100);
     assert_eq!(config.preview.split_percent, 50);
     assert_eq!(config.picker.tick_ms, 500);
-    assert_eq!(config.picker.stale_after_minutes, 30);
     assert_eq!(config.status.named_blocked, 2);
     assert_eq!(config.status.max_label, 16);
     assert_eq!(config.status.prefix, "#[fg=white]\u{F0674}#[default]");

@@ -117,11 +117,10 @@ fn draw_list(frame: &mut Frame, area: Rect, app: &mut App) {
         .max()
         .unwrap_or(0);
     let row_width = area.width.saturating_sub(HIGHLIGHT.chars().count() as u16) as usize;
-    let stale_after = Duration::from_secs(app.config.picker.stale_after_minutes * 60);
     let items: Vec<ListItem> = visible
         .into_iter()
         .enumerate()
-        .map(|(index, agent)| row(index, agent, label_width, row_width, stale_after))
+        .map(|(index, agent)| row(index, agent, label_width, row_width))
         .collect();
     let list = List::new(items).highlight_symbol(HIGHLIGHT);
     frame.render_stateful_widget(list, area, &mut app.list);
@@ -180,25 +179,14 @@ fn draw_mode(frame: &mut Frame, left: Rect, app: &App) {
     }
 }
 
-fn row(
-    index: usize,
-    agent: &Agent,
-    label_width: usize,
-    row_width: usize,
-    stale_after: Duration,
-) -> ListItem<'_> {
+fn row(index: usize, agent: &Agent, label_width: usize, row_width: usize) -> ListItem<'_> {
     let state = State::from(agent.status);
-    let (glyph_style, word) = if agent.is_stale(stale_after) {
-        (state.style().add_modifier(Modifier::DIM), "stale?")
-    } else {
-        (state.style(), state.word())
-    };
     let mut spans = vec![
         Span::styled(shortcut(index), dim()),
         Span::raw(" "),
-        Span::styled(state.glyph(), glyph_style),
+        Span::styled(state.glyph(), state.style()),
         Span::raw(" "),
-        Span::styled(format!("{word:<WORD_WIDTH$}"), dim()),
+        Span::styled(format!("{:<WORD_WIDTH$}", state.word()), dim()),
         Span::raw("  "),
         Span::styled(
             format!("{:<label_width$}", agent.label),
@@ -265,7 +253,7 @@ fn tilde(path: &std::path::Path) -> String {
     }
 }
 
-fn format_age(age: std::time::Duration) -> String {
+fn format_age(age: Duration) -> String {
     let secs = age.as_secs();
     match secs {
         s if s < 60 => format!("{s}s"),

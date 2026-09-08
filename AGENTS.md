@@ -64,7 +64,7 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   runs on defaults, and `cached` ignores the config entirely. `Config::validate` rejects `tick_ms = 0`, `interval_ms = 0`
   (both would busy-loop spawning tmux) and a `split_percent` outside 1..=100,
   naming the key. `tmux-agents config` prints the effective TOML and doubles as the
-  reference. Constants that used to live in code (tick, stale threshold, preview
+  reference. Constants that used to live in code (tick, preview
   width/split, status prefix, watch timings, new-pane command, labels) now come from
   `App::config`, `CliTmux::with_new_pane`, `status::render(_, &StatusLine)`,
   `watch::run(_, _, _, &Watch)` and `discover(_, _, _, _, &labels)`. Preview is **off**
@@ -107,10 +107,12 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   are drawn. A failed capture (pane vanished mid-tick) means no preview, never
   an exit. `p` toggles it for the life of the popup; the choice is not
   persisted.
-- **Stale rows**: a working agent whose `statusUpdatedAt` is older than
-  `agents::STALE_AFTER` (30 min) renders the word `stale?` with a dimmed glyph.
-  It still sorts and counts as working; the registry has no hung-process signal,
-  so this is a hint, not a state.
+- **No staleness marker.** Claude Code writes `statusUpdatedAt` (and
+  `updatedAt`, which mirrors it) only on status transitions, never as a
+  heartbeat, so "working for 40 min" is indistinguishable from "hung for 40
+  min". The old `stale?` word flagged every long autonomous run; the age column
+  on the right is the only hint now. `[picker] stale_after_minutes` was removed
+  with it and is rejected as an unknown key.
 - **Title stripping** removes any leading non-alphanumeric glyph plus space
   (Claude uses `✳` and spinner glyphs); a plain hostname title becomes `None`
   and the row falls back to `~/cwd`.
