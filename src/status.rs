@@ -36,7 +36,7 @@ fn segment(state: State, members: &[&Agent], config: &StatusLine) -> String {
     };
     format!(
         "#[{}]{} {body}#[default]",
-        state.tmux_style(),
+        config.style(state),
         state.glyph()
     )
 }

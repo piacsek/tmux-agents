@@ -184,6 +184,10 @@ fn out_of_range_values_fail_naming_the_key() {
         ("[watch]\ninterval_ms = 0\n", "interval_ms"),
         ("[preview]\nsplit_percent = 150\n", "split_percent"),
         ("[preview]\nsplit_percent = 0\n", "split_percent"),
+        ("[status]\nblocked_style = \"fg=red]\"\n", "blocked_style"),
+        ("[status]\nworking_style = \"#[bold]\"\n", "working_style"),
+        ("[status]\nidle_style = \"dim]#[fg=red\"\n", "idle_style"),
+        ("[status]\nunknown_style = \"a#b\"\n", "unknown_style"),
     ];
 
     for (text, key) in cases {
@@ -192,6 +196,14 @@ fn out_of_range_values_fail_naming_the_key() {
         assert!(err.contains(key), "{text}: {err}");
     }
     assert!(load(&write(&dir, "[preview]\nsplit_percent = 100\n")).is_ok());
+    let styled = load(&write(
+        &dir,
+        "[status]\nblocked_style = \"fg=white,bg=red,bold\"\nidle_style = \"\"\n",
+    ))
+    .unwrap();
+    assert_eq!(styled.status.blocked_style, "fg=white,bg=red,bold");
+    assert_eq!(styled.status.idle_style, "");
+    assert_eq!(styled.status.working_style, "fg=yellow");
 }
 
 #[test]
