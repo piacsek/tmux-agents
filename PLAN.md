@@ -348,6 +348,16 @@ commit per item, gates + reinstall before each commit. Per-item notes inline.
 - `[colors]` / `[keys]` config tables: deferred on 2026-09-07 when config landed; ANSI
   palette follows the terminal theme and the key set is small.
 
+## Phase 5 — status-line styles (2026-09-10)
+
+Trigger: the blocked segment is hardcoded `fg=red,bold`, unreadable on a magenta status bar.
+Decisions: per-state style keys under `[status]` (`blocked_style`, `working_style`,
+`idle_style`, `unknown_style`), raw tmux style strings, defaults unchanged; values containing
+`#` or `]` are rejected naming the key. The picker keeps the ANSI palette. Released as a
+patch (v0.4.1) at the user's request although the semver rule says minor for new keys.
+Process: this phase adopts conveyor's flow (`scripts/gates.sh`, `scripts/ship.sh`,
+`scripts/dev-install.sh`, branch + draft PR, rebase-merge, tag from `main`).
+
 ## Retrospective checkpoints
 
 After each phase, before planning the next:

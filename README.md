@@ -111,8 +111,9 @@ direction = "horizontal"   # or "vertical"
 
 ## Develop
 
-`cargo test`, plus `cargo test -- --ignored` for tests that start a real tmux
-server. Details and gotchas in `AGENTS.md`.
+`scripts/gates.sh` runs fmt, clippy, tests and the ignored tmux tests; `scripts/dev-install.sh`
+exposes the working tree as `tmux-agents-dev`; `scripts/ship.sh` gates, installs, commits and
+pushes; `scripts/screenshots.sh` re-renders `docs/*.png` from a fixture. See `AGENTS.md`.
 
 ## License
 
