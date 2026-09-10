@@ -49,13 +49,4 @@ impl State {
             State::Unknown => Style::default().fg(Color::DarkGray),
         }
     }
-
-    pub fn tmux_style(self) -> &'static str {
-        match self {
-            State::Working => "fg=yellow",
-            State::Blocked => "fg=red,bold",
-            State::Idle => "dim",
-            State::Unknown => "fg=brightblack",
-        }
-    }
 }

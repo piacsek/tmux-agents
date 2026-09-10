@@ -94,6 +94,10 @@ split_percent = 50     # list width; preview gets the rest
 prefix = "#[fg=white]󰙴#[default]"   # "" for none
 named_blocked = 2      # 0 = count only
 max_label = 16         # longer names end in …
+blocked_style = "fg=red,bold"     # tmux styles per state; e.g. "fg=white,bg=red,bold"
+working_style = "fg=yellow"       # on a coloured status bar
+idle_style = "dim"
+unknown_style = "fg=brightblack"
 
 [watch]
 interval_ms = 1000

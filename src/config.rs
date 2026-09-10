@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+use crate::state::State;
+
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Config {
@@ -53,6 +55,10 @@ pub struct StatusLine {
     pub prefix: String,
     pub named_blocked: usize,
     pub max_label: usize,
+    pub blocked_style: String,
+    pub working_style: String,
+    pub idle_style: String,
+    pub unknown_style: String,
 }
 
 impl Default for StatusLine {
@@ -61,7 +67,31 @@ impl Default for StatusLine {
             prefix: "#[fg=white]\u{F0674}#[default]".to_string(),
             named_blocked: 2,
             max_label: 16,
+            blocked_style: "fg=red,bold".to_string(),
+            working_style: "fg=yellow".to_string(),
+            idle_style: "dim".to_string(),
+            unknown_style: "fg=brightblack".to_string(),
         }
+    }
+}
+
+impl StatusLine {
+    pub fn style(&self, state: State) -> &str {
+        match state {
+            State::Blocked => &self.blocked_style,
+            State::Working => &self.working_style,
+            State::Idle => &self.idle_style,
+            State::Unknown => &self.unknown_style,
+        }
+    }
+
+    fn styles(&self) -> [(&'static str, &str); 4] {
+        [
+            ("status.blocked_style", &self.blocked_style),
+            ("status.working_style", &self.working_style),
+            ("status.idle_style", &self.idle_style),
+            ("status.unknown_style", &self.unknown_style),
+        ]
     }
 }
 
@@ -179,6 +209,11 @@ impl Config {
         }
         if !(1..=100).contains(&self.preview.split_percent) {
             return Err("preview.split_percent must be between 1 and 100".to_string());
+        }
+        for (key, style) in self.status.styles() {
+            if style.contains(['#', ']']) {
+                return Err(format!("{key} must not contain '#' or ']'"));
+            }
         }
         Ok(())
     }

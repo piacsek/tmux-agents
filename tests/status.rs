@@ -133,10 +133,40 @@ fn long_blocked_names_are_truncated_to_the_configured_width() {
         prefix: String::new(),
         named_blocked: 2,
         max_label: 8,
+        ..StatusLine::default()
     };
     assert_eq!(
         render(&agents, &config),
         "#[fg=red,bold]◉ a-rathe… short#[default]"
     );
     assert_eq!(StatusLine::default().max_label, 16);
+}
+
+#[test]
+fn segment_styles_come_from_config_with_the_ansi_defaults_kept() {
+    let agents = vec![
+        agent_with_status("a", "%1", Status::Waiting),
+        agent_with_status("b", "%2", Status::Busy),
+        agent_with_status("c", "%3", Status::Idle),
+        agent_with_status("d", "%4", Status::Unknown),
+    ];
+
+    let themed = StatusLine {
+        prefix: String::new(),
+        blocked_style: "fg=white,bg=red,bold".to_string(),
+        working_style: "fg=green".to_string(),
+        idle_style: "fg=blue".to_string(),
+        unknown_style: "none".to_string(),
+        ..StatusLine::default()
+    };
+    assert_eq!(
+        render(&agents, &themed),
+        "#[fg=white,bg=red,bold]◉ a#[default] #[fg=green]● 1#[default] #[fg=blue]○ 1#[default] #[none]○ 1#[default]"
+    );
+
+    let defaults = StatusLine::default();
+    assert_eq!(defaults.blocked_style, "fg=red,bold");
+    assert_eq!(defaults.working_style, "fg=yellow");
+    assert_eq!(defaults.idle_style, "dim");
+    assert_eq!(defaults.unknown_style, "fg=brightblack");
 }
