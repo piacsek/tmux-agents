@@ -58,10 +58,18 @@ impl Server {
     }
 
     fn wait_for_screen(&self, needle: &str) -> String {
+        self.wait_for_pane(None, needle)
+    }
+
+    fn wait_for_pane(&self, pane: Option<&str>, needle: &str) -> String {
+        let mut args = vec!["capture-pane", "-p"];
+        if let Some(pane) = pane {
+            args.extend(["-t", pane]);
+        }
         let deadline = Instant::now() + Duration::from_secs(5);
         let mut screen = String::new();
         while Instant::now() < deadline {
-            let out = self.tmux(&["capture-pane", "-p"]).output().unwrap();
+            let out = self.tmux(&args).output().unwrap();
             screen = String::from_utf8_lossy(&out.stdout).into_owned();
             if screen.contains(needle) {
                 return screen;
@@ -205,6 +213,49 @@ fn a_wide_binary_previews_the_registered_panes_content() {
         "{screen}"
     );
     assert!(screen.contains("│ PREVIEW-MARKER"), "{screen}");
+}
+
+#[test]
+#[ignore = "needs a tmux binary; run with --ignored"]
+fn i_types_into_the_registered_pane_from_the_picker() {
+    let server = Server::start("passthrough");
+    let picker_pane = server.pane_id();
+    assert!(
+        server
+            .tmux(&["split-window", "-d", "-v", "cat"])
+            .status()
+            .unwrap()
+            .success()
+    );
+    let agent_pane = server
+        .tmux(&["list-panes", "-F", "#{pane_id}"])
+        .output()
+        .map(|out| String::from_utf8_lossy(&out.stdout).into_owned())
+        .unwrap()
+        .lines()
+        .find(|id| *id != picker_pane)
+        .unwrap()
+        .to_string();
+    let home = fixture_home_for(&agent_pane);
+    server.respawn(
+        &[("HOME", home.path().to_str().unwrap())],
+        env!("CARGO_BIN_EXE_tmux-agents"),
+    );
+    server.wait_for_screen("fixture-project");
+
+    for keys in [&["i"][..], &["-l", "hi"], &["Enter"]] {
+        let mut args = vec!["send-keys", "-t", &picker_pane];
+        args.extend_from_slice(keys);
+        assert!(server.tmux(&args).status().unwrap().success());
+    }
+    let agent_screen = server.wait_for_pane(Some(&agent_pane), "hi");
+    let picker_screen = server.wait_for_screen("Ctrl-] back");
+
+    assert!(agent_screen.lines().any(|l| l == "hi"), "{agent_screen}");
+    assert!(
+        picker_screen.contains("→ fixture-project  Ctrl-] back"),
+        "{picker_screen}"
+    );
 }
 
 #[test]
