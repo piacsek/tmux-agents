@@ -24,6 +24,12 @@ pub struct Client {
     pub active_pane: PaneId,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Key {
+    Literal(String),
+    Named(&'static str),
+}
+
 pub trait Tmux {
     fn list_panes(&self) -> io::Result<Vec<PaneInfo>>;
     fn focus(&self, pane: &PaneId) -> io::Result<()>;
@@ -32,6 +38,7 @@ pub trait Tmux {
     fn capture(&self, pane: &PaneId) -> io::Result<Vec<String>>;
     fn clients(&self) -> io::Result<Vec<Client>>;
     fn display_message(&self, client: &str, text: &str, duration: Duration) -> io::Result<()>;
+    fn send_key(&self, pane: &PaneId, key: &Key) -> io::Result<()>;
 }
 
 const PANE_FORMAT: &str = "#{pane_id}\t#{session_name}\t#{window_id}\t#{window_index}\t#{pane_current_path}\t#{pane_title}";
@@ -100,6 +107,13 @@ impl CliTmux {
         self.args(&["capture-pane", "-e", "-p", "-t", &pane.0])
     }
 
+    pub fn send_key_args(&self, pane: &PaneId, key: &Key) -> Vec<String> {
+        match key {
+            Key::Literal(text) => self.args(&["send-keys", "-t", &pane.0, "-l", text]),
+            Key::Named(name) => self.args(&["send-keys", "-t", &pane.0, name]),
+        }
+    }
+
     fn args(&self, command: &[&str]) -> Vec<String> {
         let mut args = Vec::new();
         if let Some(socket) = &self.socket_name {
@@ -159,6 +173,10 @@ impl Tmux for CliTmux {
     fn display_message(&self, client: &str, text: &str, duration: Duration) -> io::Result<()> {
         self.run(&self.display_message_args(client, text, duration))
             .map(drop)
+    }
+
+    fn send_key(&self, pane: &PaneId, key: &Key) -> io::Result<()> {
+        self.run(&self.send_key_args(pane, key)).map(drop)
     }
 }
 
@@ -316,6 +334,23 @@ mod tests {
         assert_eq!(
             CliTmux::default().capture_args(&PaneId("%7".to_string())),
             vec!["capture-pane", "-e", "-p", "-t", "%7"]
+        );
+    }
+
+    #[test]
+    fn send_key_types_literal_text_with_l() {
+        assert_eq!(
+            CliTmux::default()
+                .send_key_args(&PaneId("%7".to_string()), &Key::Literal("h".to_string())),
+            vec!["send-keys", "-t", "%7", "-l", "h"]
+        );
+    }
+
+    #[test]
+    fn send_key_sends_a_named_key_by_name() {
+        assert_eq!(
+            CliTmux::default().send_key_args(&PaneId("%7".to_string()), &Key::Named("Enter")),
+            vec!["send-keys", "-t", "%7", "Enter"]
         );
     }
 
