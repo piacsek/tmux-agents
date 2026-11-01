@@ -47,7 +47,14 @@ impl Server {
     }
 
     fn respawn(&self, env: &[(&str, &str)], command: &str) {
+        self.respawn_in(None, env, command);
+    }
+
+    fn respawn_in(&self, pane: Option<&str>, env: &[(&str, &str)], command: &str) {
         let mut args = vec!["respawn-pane", "-k"];
+        if let Some(pane) = pane {
+            args.extend(["-t", pane]);
+        }
         let pairs: Vec<String> = env.iter().map(|(k, v)| format!("{k}={v}")).collect();
         for pair in &pairs {
             args.push("-e");
@@ -217,45 +224,51 @@ fn a_wide_binary_previews_the_registered_panes_content() {
 
 #[test]
 #[ignore = "needs a tmux binary; run with --ignored"]
-fn i_types_into_the_registered_pane_from_the_picker() {
-    let server = Server::start("passthrough");
+fn i_attaches_the_picker_to_the_agents_pane_until_detach() {
+    let server = Server::start("attach");
     let picker_pane = server.pane_id();
+    let out = server
+        .tmux(&[
+            "new-session",
+            "-d",
+            "-s",
+            "agents",
+            "-P",
+            "-F",
+            "#{pane_id}",
+            "echo ATTACH-MARKER; cat",
+        ])
+        .output()
+        .unwrap();
+    let agent_pane = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    let home = fixture_home_for(&agent_pane);
+    server.respawn_in(
+        Some(&picker_pane),
+        &[("HOME", home.path().to_str().unwrap())],
+        env!("CARGO_BIN_EXE_tmux-agents"),
+    );
+    server.wait_for_pane(Some(&picker_pane), "fixture-project");
+
     assert!(
         server
-            .tmux(&["split-window", "-d", "-v", "cat"])
+            .tmux(&["send-keys", "-t", &picker_pane, "i"])
             .status()
             .unwrap()
             .success()
     );
-    let agent_pane = server
-        .tmux(&["list-panes", "-F", "#{pane_id}"])
-        .output()
-        .map(|out| String::from_utf8_lossy(&out.stdout).into_owned())
-        .unwrap()
-        .lines()
-        .find(|id| *id != picker_pane)
-        .unwrap()
-        .to_string();
-    let home = fixture_home_for(&agent_pane);
-    server.respawn(
-        &[("HOME", home.path().to_str().unwrap())],
-        env!("CARGO_BIN_EXE_tmux-agents"),
-    );
-    server.wait_for_screen("fixture-project");
+    let attached = server.wait_for_pane(Some(&picker_pane), "ATTACH-MARKER");
+    assert!(attached.contains("ATTACH-MARKER"), "{attached}");
+    assert!(!attached.contains("fixture-project"), "{attached}");
 
-    for keys in [&["i"][..], &["-l", "hi"], &["Enter"]] {
-        let mut args = vec!["send-keys", "-t", &picker_pane];
-        args.extend_from_slice(keys);
-        assert!(server.tmux(&args).status().unwrap().success());
-    }
-    let agent_screen = server.wait_for_pane(Some(&agent_pane), "hi");
-    let picker_screen = server.wait_for_screen("Ctrl-] back");
-
-    assert!(agent_screen.lines().any(|l| l == "hi"), "{agent_screen}");
     assert!(
-        picker_screen.contains("→ fixture-project  Ctrl-] back"),
-        "{picker_screen}"
+        server
+            .tmux(&["detach-client", "-s", "agents"])
+            .status()
+            .unwrap()
+            .success()
     );
+    let back = server.wait_for_pane(Some(&picker_pane), "fixture-project");
+    assert!(back.contains("> 1 ● working  fixture-project"), "{back}");
 }
 
 #[test]

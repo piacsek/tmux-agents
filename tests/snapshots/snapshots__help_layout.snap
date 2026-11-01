@@ -7,7 +7,7 @@ j/k ↓/↑  move
 gg / G   first / last                                       
 /        filter, Esc clears                                 
 Enter    focus pane                                         
-i        type into agent, Ctrl-] back                       
+i        attach to agent, detach returns                    
 n        new Claude pane                                    
 x        kill pane, asks y/n                                
 p        toggle preview                                     

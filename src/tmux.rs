@@ -1,7 +1,12 @@
 use std::io;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Output, Stdio};
 use std::time::Duration;
+
+use ratatui::crossterm::execute;
+use ratatui::crossterm::terminal::{
+    EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
+};
 
 use crate::config::{Direction, NewPane};
 
@@ -24,12 +29,6 @@ pub struct Client {
     pub active_pane: PaneId,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Key {
-    Literal(String),
-    Named(String),
-}
-
 pub trait Tmux {
     fn list_panes(&self) -> io::Result<Vec<PaneInfo>>;
     fn focus(&self, pane: &PaneId) -> io::Result<()>;
@@ -38,7 +37,7 @@ pub trait Tmux {
     fn capture(&self, pane: &PaneId) -> io::Result<Vec<String>>;
     fn clients(&self) -> io::Result<Vec<Client>>;
     fn display_message(&self, client: &str, text: &str, duration: Duration) -> io::Result<()>;
-    fn send_key(&self, pane: &PaneId, key: &Key) -> io::Result<()>;
+    fn attach(&self, pane: &PaneId) -> io::Result<()>;
 }
 
 const PANE_FORMAT: &str = "#{pane_id}\t#{session_name}\t#{window_id}\t#{window_index}\t#{pane_current_path}\t#{pane_title}";
@@ -107,11 +106,17 @@ impl CliTmux {
         self.args(&["capture-pane", "-e", "-p", "-t", &pane.0])
     }
 
-    pub fn send_key_args(&self, pane: &PaneId, key: &Key) -> Vec<String> {
-        match key {
-            Key::Literal(text) => self.args(&["send-keys", "-t", &pane.0, "-l", text]),
-            Key::Named(name) => self.args(&["send-keys", "-t", &pane.0, name]),
-        }
+    pub fn attach_args(&self, pane: &PaneId, tmux_env: Option<&str>) -> Vec<String> {
+        let socket = tmux_env
+            .filter(|_| self.socket_name.is_none())
+            .and_then(|env| env.split(',').next())
+            .filter(|path| !path.is_empty());
+        let mut args = match socket {
+            Some(path) => vec!["-S".to_string(), path.to_string()],
+            None => Vec::new(),
+        };
+        args.extend(self.args(&["attach-session", "-t", &pane.0]));
+        args
     }
 
     fn args(&self, command: &[&str]) -> Vec<String> {
@@ -125,21 +130,7 @@ impl CliTmux {
     }
 
     fn run(&self, args: &[String]) -> io::Result<String> {
-        let output = Command::new("tmux").args(args).output().map_err(|err| {
-            if err.kind() == io::ErrorKind::NotFound {
-                io::Error::new(
-                    io::ErrorKind::NotFound,
-                    "tmux not found on PATH; install tmux (brew install tmux)",
-                )
-            } else {
-                err
-            }
-        })?;
-        if !output.status.success() {
-            return Err(io::Error::other(
-                String::from_utf8_lossy(&output.stderr).trim().to_string(),
-            ));
-        }
+        let output = checked(Command::new("tmux").args(args).output())?;
         Ok(String::from_utf8_lossy(&output.stdout).into_owned())
     }
 }
@@ -175,9 +166,38 @@ impl Tmux for CliTmux {
             .map(drop)
     }
 
-    fn send_key(&self, pane: &PaneId, key: &Key) -> io::Result<()> {
-        self.run(&self.send_key_args(pane, key)).map(drop)
+    fn attach(&self, pane: &PaneId) -> io::Result<()> {
+        disable_raw_mode()?;
+        execute!(io::stdout(), LeaveAlternateScreen)?;
+        let output = Command::new("tmux")
+            .args(self.attach_args(pane, std::env::var("TMUX").ok().as_deref()))
+            .env_remove("TMUX")
+            .stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .output();
+        execute!(io::stdout(), EnterAlternateScreen)?;
+        enable_raw_mode()?;
+        checked(output).map(drop)
     }
+}
+
+fn checked(output: io::Result<Output>) -> io::Result<Output> {
+    let output = output.map_err(|err| {
+        if err.kind() == io::ErrorKind::NotFound {
+            io::Error::new(
+                io::ErrorKind::NotFound,
+                "tmux not found on PATH; install tmux (brew install tmux)",
+            )
+        } else {
+            err
+        }
+    })?;
+    if !output.status.success() {
+        return Err(io::Error::other(
+            String::from_utf8_lossy(&output.stderr).trim().to_string(),
+        ));
+    }
+    Ok(output)
 }
 
 pub fn escape(text: &str) -> String {
@@ -338,20 +358,27 @@ mod tests {
     }
 
     #[test]
-    fn send_key_types_literal_text_with_l() {
+    fn attach_opens_a_client_on_the_given_panes_session_window_and_pane() {
         assert_eq!(
-            CliTmux::default()
-                .send_key_args(&PaneId("%7".to_string()), &Key::Literal("h".to_string())),
-            vec!["send-keys", "-t", "%7", "-l", "h"]
+            CliTmux::default().attach_args(&PaneId("%7".to_string()), None),
+            vec!["attach-session", "-t", "%7"]
         );
     }
 
     #[test]
-    fn send_key_sends_a_named_key_by_name() {
+    fn attach_reaches_the_callers_server_through_the_socket_in_tmux_env() {
         assert_eq!(
-            CliTmux::default()
-                .send_key_args(&PaneId("%7".to_string()), &Key::Named("Enter".to_string())),
-            vec!["send-keys", "-t", "%7", "Enter"]
+            CliTmux::default().attach_args(
+                &PaneId("%7".to_string()),
+                Some("/private/tmp/tmux-501/work,4242,3")
+            ),
+            vec![
+                "-S",
+                "/private/tmp/tmux-501/work",
+                "attach-session",
+                "-t",
+                "%7"
+            ]
         );
     }
 

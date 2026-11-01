@@ -13,7 +13,7 @@ use tmux_agents::agents::Agent;
 use tmux_agents::app::{App, Input, run};
 use tmux_agents::config::Config;
 use tmux_agents::registry::Status;
-use tmux_agents::tmux::{Client, Key, PaneId, PaneInfo, Tmux};
+use tmux_agents::tmux::{Client, PaneId, PaneInfo, Tmux};
 
 #[derive(Default)]
 pub struct FakeTmux {
@@ -25,7 +25,7 @@ pub struct FakeTmux {
     action_fails: RefCell<bool>,
     clients: RefCell<Vec<Client>>,
     messages: RefCell<Vec<(String, String, u64)>>,
-    sent: RefCell<Vec<(PaneId, Key)>>,
+    attached: RefCell<Vec<PaneId>>,
 }
 
 impl FakeTmux {
@@ -41,8 +41,8 @@ impl FakeTmux {
         self.killed.borrow().clone()
     }
 
-    pub fn sent(&self) -> Vec<(PaneId, Key)> {
-        self.sent.borrow().clone()
+    pub fn attached(&self) -> Vec<PaneId> {
+        self.attached.borrow().clone()
     }
 
     pub fn fail_captures(&self) {
@@ -118,9 +118,9 @@ impl Tmux for FakeTmux {
         Ok(())
     }
 
-    fn send_key(&self, pane: &PaneId, key: &Key) -> io::Result<()> {
+    fn attach(&self, pane: &PaneId) -> io::Result<()> {
         self.action()?;
-        self.sent.borrow_mut().push((pane.clone(), key.clone()));
+        self.attached.borrow_mut().push(pane.clone());
         Ok(())
     }
 

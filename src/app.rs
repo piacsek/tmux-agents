@@ -7,8 +7,7 @@ use ratatui::widgets::ListState;
 
 use crate::agents::Agent;
 use crate::config::Config;
-use crate::keys::to_tmux;
-use crate::tmux::{Key, PaneId, Tmux};
+use crate::tmux::{PaneId, Tmux};
 use crate::ui;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -24,7 +23,7 @@ pub enum Action {
     Focus(PaneId),
     NewClaudePane,
     Kill(PaneId),
-    Send(PaneId, Key),
+    Attach(PaneId),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -34,7 +33,6 @@ pub enum Mode {
     Filter(String),
     Help,
     Confirm(PaneId),
-    Passthrough(PaneId),
 }
 
 pub struct App {
@@ -64,12 +62,10 @@ impl App {
     }
 
     pub fn load_preview<T: Tmux>(&mut self, tmux: &T) {
-        let pane = match &self.mode {
-            Mode::Passthrough(pane) => Some(pane.clone()),
-            _ if self.preview_enabled => self.selected_agent().map(|agent| agent.pane.clone()),
+        self.preview = match self.selected_agent() {
+            Some(agent) if self.preview_enabled => tmux.capture(&agent.pane).ok(),
             _ => None,
         };
-        self.preview = pane.and_then(|pane| tmux.capture(&pane).ok());
     }
 
     pub fn refresh(&mut self, agents: Vec<Agent>) {
@@ -100,16 +96,6 @@ impl App {
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Action {
         self.error = None;
-        if let Mode::Passthrough(pane) = &self.mode {
-            if is_passthrough_exit(key) {
-                self.mode = Mode::Normal;
-                return Action::Continue;
-            }
-            return match to_tmux(key) {
-                Some(key) => Action::Send(pane.clone(), key),
-                None => Action::Continue,
-            };
-        }
         if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
             return Action::Quit;
         }
@@ -121,7 +107,6 @@ impl App {
             Mode::Filter(_) => self.handle_filter_key(key),
             Mode::Normal => self.handle_normal_key(key),
             Mode::Confirm(_) => self.handle_confirm_key(key),
-            Mode::Passthrough(_) => Action::Continue,
         }
     }
 
@@ -137,20 +122,9 @@ impl App {
 
     pub fn confirming(&self) -> Option<&Agent> {
         match &self.mode {
-            Mode::Confirm(pane) => self.agent_on(pane),
+            Mode::Confirm(pane) => self.agents.iter().find(|agent| &agent.pane == pane),
             _ => None,
         }
-    }
-
-    pub fn typing_into(&self) -> Option<&Agent> {
-        match &self.mode {
-            Mode::Passthrough(pane) => self.agent_on(pane),
-            _ => None,
-        }
-    }
-
-    fn agent_on(&self, pane: &PaneId) -> Option<&Agent> {
-        self.agents.iter().find(|agent| &agent.pane == pane)
     }
 
     fn handle_filter_key(&mut self, key: KeyEvent) -> Action {
@@ -182,7 +156,7 @@ impl App {
             }
             KeyCode::Char('i') => {
                 if let Some(agent) = self.selected_agent() {
-                    self.mode = Mode::Passthrough(agent.pane.clone());
+                    return Action::Attach(agent.pane.clone());
                 }
             }
             KeyCode::Char('g') if pending_g => self.list.select_first(),
@@ -213,11 +187,6 @@ impl App {
         self.list.select_first();
         Action::Continue
     }
-}
-
-fn is_passthrough_exit(key: KeyEvent) -> bool {
-    key.modifiers.contains(KeyModifiers::CONTROL)
-        && matches!(key.code, KeyCode::Char(']') | KeyCode::Char('5'))
 }
 
 fn attempt(app: &mut App, result: io::Result<()>) -> bool {
@@ -300,10 +269,9 @@ where
                         app.refresh(source()?);
                     }
                 }
-                Action::Send(pane, key) => {
-                    if !attempt(app, tmux.send_key(&pane, &key)) {
-                        app.mode = Mode::Normal;
-                    }
+                Action::Attach(pane) => {
+                    attempt(app, tmux.attach(&pane));
+                    terminal.clear().map_err(io::Error::other)?;
                 }
                 Action::Continue => {}
             },
