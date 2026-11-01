@@ -360,16 +360,19 @@ Process: this phase adopts conveyor's flow (`scripts/gates.sh`, `scripts/ship.sh
 
 ## Phase 6: type into an agent, colored preview (2026-11-01)
 
-Issue #2. Decisions: live passthrough instead of a separate input box, so Claude Code's own
-slash menu, `@` files and history keep working. `i` enters, `Ctrl-]` (also `Ctrl-5`) leaves,
-Ctrl-c and Esc are forwarded, the popup stays open afterwards. Color came first because
-Claude draws its cursor and menu highlight with SGR styling: `capture-pane -e` parsed by
-`ansi-to-tui` 8.0.1, which builds on the same `ratatui-core` 0.1 as ratatui 0.30, so no
-hand-written parser. `Key::Named` holds a `String` (the plan said `&'static str`) because
-`C-<c>` and `M-<c>` chords are built at runtime. The `?` hint is hidden in passthrough since
-`?` is forwarded. Known limits, deferred: up to one tick (500 ms) of preview lag per key,
-pasted text arrives key by key with an embedded newline submitting, Shift+Enter is
-indistinguishable from Enter.
+Issue #2. Color: `capture-pane -e` parsed by `ansi-to-tui` 8.0.1, which builds on the same
+`ratatui-core` 0.1 as ratatui 0.30, so no hand-written parser.
+
+Typing into an agent: first built as key-by-key passthrough (`send-keys` per key, capture as
+the view). Dropped after a live try: no cursor (`capture-pane` has none), the view is the
+agent pane's size rather than the popup's, and paste, Shift+Enter and per-key lag were
+already known limits. Replaced by attaching a real tmux client in the popup
+(`attach-session -t %<pane>`), returning to the list on detach. No grouped session, at the
+user's choice: the cost is that the agent's session switches to that window for every client
+on it. An embedded terminal (`portable-pty` + `vt100` + `tui-term`) running `claude
+--resume` was considered and rejected for this: it starts a second Claude on the same
+conversation instead of reaching the running one, and dies with the popup. It fits a
+separate "resume a finished session" feature.
 
 ## Retrospective checkpoints
 

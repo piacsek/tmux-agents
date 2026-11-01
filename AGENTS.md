@@ -119,17 +119,16 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   are drawn. A failed capture (pane vanished mid-tick) means no preview, never
   an exit. `p` toggles it for the life of the popup; the choice is not
   persisted.
-- **Passthrough (`i`).** `Mode::Passthrough(pane)` sends every key to that pane
-  through `keys::to_tmux` (`send-keys -l` for text, `send-keys <Name>` for named
-  keys and `C-`/`M-` chords); keys with no tmux name are dropped. `handle_key`
-  checks Passthrough **before** the global Ctrl-c quit, so Ctrl-c interrupts
-  Claude instead of closing the popup, and Esc is forwarded too. The only way out
-  is `Ctrl-]`, matched as both `Char(']')+CONTROL` and `Char('5')+CONTROL`
-  because crossterm reports 0x1D as `5` on legacy terminals. The body is the
-  pane's capture at full width (list hidden, any popup width, preview setting
-  ignored) and the footer reads `→ <label>  Ctrl-] back` with no `?` hint, since
-  `?` goes to Claude. A failed `send-keys` sets `App::error` and returns to
-  Normal (the pane is gone). Keys reach the preview one tick late at worst.
+- **Attach (`i`).** `CliTmux::attach` leaves raw mode and the alternate screen,
+  runs `tmux attach-session -t %<pane>` in the popup's own terminal, then
+  restores both and `run()` clears the terminal so the list redraws in full.
+  `TMUX` is removed from the child's env (tmux refuses to nest otherwise), so the
+  socket is passed back explicitly as `-S <first field of $TMUX>`; without it the
+  client lands on the default server. No session is created: the attach selects
+  the pane's window and pane in its own session, which also moves any other client
+  on that session (including the one behind the popup when the agent shares it).
+  The window takes the popup's size while attached. Detach (`prefix d`) returns
+  to the list; a failed attach shows in the footer.
 - **No staleness marker.** Claude Code writes `statusUpdatedAt` (and
   `updatedAt`, which mirrors it) only on status transitions, never as a
   heartbeat, so "working for 40 min" is indistinguishable from "hung for 40
