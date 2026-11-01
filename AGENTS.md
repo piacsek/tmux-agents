@@ -209,6 +209,9 @@ agent's private memory. When the user says "update the guidelines", edit this fi
   Never `cargo install` the crate into a PATH directory.
 - **Plan before code.** Each phase starts from the plan in `PLAN.md`, is re-planned after the
   previous retro, and its verified facts are checked against live tools before use.
+- **Approved plans become GitHub issues.** Once the user approves a plan, file it with
+  `gh issue create --assignee @me`, title per the ticket rules (user-visible effect, plain
+  language), body = the plan verbatim. The phase PR closes it (`Closes #N`).
 
 ## Development
 
