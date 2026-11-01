@@ -183,3 +183,34 @@ fn min_width_and_split_percent_come_from_config() {
     assert_eq!(first.chars().nth(27), Some('│'), "{screen}");
     assert!(first.contains("cargo test"), "{screen}");
 }
+
+#[test]
+fn the_preview_keeps_the_panes_colors() {
+    let mut picker = Picker::with_config(vec![agent("dotfiles", "%1")], 120, 5, previewing());
+    picker.tmux.set_capture("%1", &["\x1b[31mfail\x1b[0m"]);
+
+    picker.run(Vec::new()).unwrap();
+
+    let screen = picker.screen();
+    let first: Vec<char> = screen.lines().next().unwrap().chars().collect();
+    let x = first
+        .windows(4)
+        .position(|w| w == ['f', 'a', 'i', 'l'])
+        .unwrap() as u16;
+    assert_eq!(picker.cell(x, 0).symbol(), "f", "{screen}");
+    assert_eq!(picker.cell(x, 0).fg, ratatui::style::Color::Red, "{screen}");
+}
+
+#[test]
+fn a_trailing_line_of_only_escape_codes_counts_as_blank() {
+    let mut picker = Picker::with_config(vec![agent("dotfiles", "%1")], 120, 3, previewing());
+    picker
+        .tmux
+        .set_capture("%1", &["line 1", "line 2", "\x1b[0m", "\x1b[31m  \x1b[0m"]);
+
+    picker.run(Vec::new()).unwrap();
+
+    let right = right_half(&picker);
+    assert_eq!(right[0], "│ line 1", "{}", picker.screen());
+    assert_eq!(right[1], "│ line 2", "{}", picker.screen());
+}

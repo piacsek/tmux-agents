@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use ansi_to_tui::IntoText as _;
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
@@ -34,28 +35,35 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     draw_footer(frame, footer, app);
 }
 
-fn preview_lines(app: &App, body: Rect) -> Option<Vec<String>> {
+fn preview_lines(app: &App, body: Rect) -> Option<Vec<Line<'static>>> {
     if body.width < app.config.preview.min_width {
         return None;
     }
-    let lines = app.preview.clone()?;
+    let mut lines = styled(app.preview.as_ref()?);
     let end = lines
         .iter()
-        .rposition(|l| !l.trim().is_empty())
+        .rposition(|line| !line.to_string().trim().is_empty())
         .map_or(0, |i| i + 1);
+    lines.truncate(end);
     let start = end.saturating_sub(body.height as usize);
-    Some(lines[start..end].to_vec())
+    Some(lines.split_off(start))
 }
 
-fn draw_preview(frame: &mut Frame, area: Rect, lines: &[String]) {
+fn styled(raw: &[String]) -> Vec<Line<'static>> {
+    raw.join("\n")
+        .into_text()
+        .map(|text| text.lines)
+        .unwrap_or_else(|_| raw.iter().map(|l| Line::from(l.clone())).collect())
+}
+
+fn draw_preview(frame: &mut Frame, area: Rect, lines: &[Line<'static>]) {
     let [gutter, text] =
         Layout::horizontal([Constraint::Length(2), Constraint::Fill(1)]).areas(area);
     let rule: Vec<Line> = (0..gutter.height)
         .map(|_| Line::from(Span::styled("│", dim())))
         .collect();
     frame.render_widget(Paragraph::new(rule), gutter);
-    let content: Vec<Line> = lines.iter().map(|l| Line::from(l.as_str())).collect();
-    frame.render_widget(Paragraph::new(content), text);
+    frame.render_widget(Paragraph::new(lines.to_vec()), text);
 }
 
 fn draw_empty(frame: &mut Frame, area: Rect) {

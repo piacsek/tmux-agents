@@ -97,7 +97,7 @@ impl CliTmux {
     }
 
     pub fn capture_args(&self, pane: &PaneId) -> Vec<String> {
-        self.args(&["capture-pane", "-p", "-t", &pane.0])
+        self.args(&["capture-pane", "-e", "-p", "-t", &pane.0])
     }
 
     fn args(&self, command: &[&str]) -> Vec<String> {
@@ -312,10 +312,10 @@ mod tests {
     }
 
     #[test]
-    fn capture_prints_the_given_panes_visible_content() {
+    fn capture_prints_the_given_panes_visible_content_with_its_colors() {
         assert_eq!(
             CliTmux::default().capture_args(&PaneId("%7".to_string())),
-            vec!["capture-pane", "-p", "-t", "%7"]
+            vec!["capture-pane", "-e", "-p", "-t", "%7"]
         );
     }
 

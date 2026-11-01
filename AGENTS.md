@@ -112,7 +112,7 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
 - **`x` is the only destructive key** and always goes through
   `Mode::Confirm(pane)`; only `y` yields `Action::Kill`, any other key cancels.
   After `kill-pane` the popup stays open and refreshes so the row disappears.
-- **Preview** is `capture-pane -p` of the selected pane, fetched once per
+- **Preview** is `capture-pane -e -p` of the selected pane, fetched once per
   `run()` iteration (every key and tick), shown only when the body is at least
   `PREVIEW_MIN_WIDTH` (100) columns so the 60-column test terminal never
   previews. Trailing blank lines are dropped and only the last `height` lines
@@ -167,7 +167,10 @@ tests/           outside-in tests drive run() with a TestBackend + FakeTmux
   Labels and `waitingFor` come from directory names and Claude Code, so
   `tmux::escape` doubles every `#` in `watch` alerts and `status` names.
 - **Colors** come from the ANSI palette (idle is `dim` with no fg) so terminal
-  themes apply. Do not hardcode hex.
+  themes apply. Do not hardcode hex. That rule covers our own palette only: the
+  preview captures with `capture-pane -e` and parses the SGR codes through
+  `ansi-to-tui`, so pane content keeps the pane's own colors, truecolor included.
+  Trailing lines that are blank once the escapes are removed are dropped.
 
 ## Documentation rule
 
