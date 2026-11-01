@@ -7,7 +7,8 @@ use ratatui::widgets::ListState;
 
 use crate::agents::Agent;
 use crate::config::Config;
-use crate::tmux::{PaneId, Tmux};
+use crate::keys::to_tmux;
+use crate::tmux::{Key, PaneId, Tmux};
 use crate::ui;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,6 +24,7 @@ pub enum Action {
     Focus(PaneId),
     NewClaudePane,
     Kill(PaneId),
+    Send(PaneId, Key),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -32,6 +34,7 @@ pub enum Mode {
     Filter(String),
     Help,
     Confirm(PaneId),
+    Passthrough(PaneId),
 }
 
 pub struct App {
@@ -95,6 +98,16 @@ impl App {
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Action {
         self.error = None;
+        if let Mode::Passthrough(pane) = &self.mode {
+            if is_passthrough_exit(key) {
+                self.mode = Mode::Normal;
+                return Action::Continue;
+            }
+            return match to_tmux(key) {
+                Some(key) => Action::Send(pane.clone(), key),
+                None => Action::Continue,
+            };
+        }
         if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
             return Action::Quit;
         }
@@ -106,6 +119,7 @@ impl App {
             Mode::Filter(_) => self.handle_filter_key(key),
             Mode::Normal => self.handle_normal_key(key),
             Mode::Confirm(_) => self.handle_confirm_key(key),
+            Mode::Passthrough(_) => Action::Continue,
         }
     }
 
@@ -153,6 +167,11 @@ impl App {
                     self.mode = Mode::Confirm(agent.pane.clone());
                 }
             }
+            KeyCode::Char('i') => {
+                if let Some(agent) = self.selected_agent() {
+                    self.mode = Mode::Passthrough(agent.pane.clone());
+                }
+            }
             KeyCode::Char('g') if pending_g => self.list.select_first(),
             KeyCode::Char('g') => self.pending_g = true,
             KeyCode::Enter => {
@@ -181,6 +200,11 @@ impl App {
         self.list.select_first();
         Action::Continue
     }
+}
+
+fn is_passthrough_exit(key: KeyEvent) -> bool {
+    key.modifiers.contains(KeyModifiers::CONTROL)
+        && matches!(key.code, KeyCode::Char(']') | KeyCode::Char('5'))
 }
 
 fn attempt(app: &mut App, result: io::Result<()>) -> bool {
@@ -261,6 +285,11 @@ where
                 Action::Kill(pane) => {
                     if attempt(app, tmux.kill_pane(&pane)) {
                         app.refresh(source()?);
+                    }
+                }
+                Action::Send(pane, key) => {
+                    if !attempt(app, tmux.send_key(&pane, &key)) {
+                        app.mode = Mode::Normal;
                     }
                 }
                 Action::Continue => {}

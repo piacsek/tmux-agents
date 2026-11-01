@@ -183,7 +183,7 @@ fn draw_mode(frame: &mut Frame, left: Rect, app: &App) {
                 left,
             );
         }
-        Mode::Normal => {}
+        Mode::Normal | Mode::Passthrough(_) => {}
     }
 }
 

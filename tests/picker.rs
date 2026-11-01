@@ -4,7 +4,7 @@ use ratatui::crossterm::event::KeyCode;
 use ratatui::style::{Color, Modifier};
 use support::{Picker, agent, agent_with_status, ctrl, key, tick};
 use tmux_agents::registry::Status;
-use tmux_agents::tmux::PaneId;
+use tmux_agents::tmux::{Key, PaneId};
 
 #[test]
 fn empty_list_shows_message_and_q_quits() {
@@ -886,5 +886,104 @@ fn a_failed_tmux_action_shows_the_error_in_the_footer_and_keeps_the_popup_open()
     picker.run(vec![key(KeyCode::Char('j'))]).unwrap();
     let screen = picker.screen();
     assert!(!screen.contains("can't find pane"), "{screen}");
+    assert!(screen.contains("> 2 ○ idle     webapp"), "{screen}");
+}
+
+fn literal(pane: &str, text: &str) -> (PaneId, Key) {
+    (PaneId(pane.to_string()), Key::Literal(text.to_string()))
+}
+
+fn named(pane: &str, name: &str) -> (PaneId, Key) {
+    (PaneId(pane.to_string()), Key::Named(name.to_string()))
+}
+
+#[test]
+fn i_forwards_typed_keys_to_the_selected_agents_pane() {
+    let mut picker = Picker::new(vec![agent("dotfiles", "%1"), agent("webapp", "%2")]);
+
+    picker
+        .run(vec![
+            key(KeyCode::Char('j')),
+            key(KeyCode::Char('i')),
+            key(KeyCode::Char('h')),
+            key(KeyCode::Char('i')),
+            key(KeyCode::Enter),
+        ])
+        .unwrap();
+
+    let sent = picker.tmux.sent();
+    assert_eq!(sent.len(), 3);
+    assert_eq!(sent[0], literal("%2", "h"));
+    assert_eq!(sent[1], literal("%2", "i"));
+    assert_eq!(sent[2], named("%2", "Enter"));
+    assert!(picker.tmux.focused().is_empty());
+}
+
+#[test]
+fn ctrl_c_in_passthrough_interrupts_the_agent_instead_of_closing() {
+    let mut picker = Picker::new(vec![agent("dotfiles", "%1")]);
+
+    picker
+        .run(vec![
+            key(KeyCode::Char('i')),
+            ctrl('c'),
+            key(KeyCode::Char('y')),
+        ])
+        .unwrap();
+
+    let sent = picker.tmux.sent();
+    assert_eq!(sent.len(), 2);
+    assert_eq!(sent[0], named("%1", "C-c"));
+    assert_eq!(sent[1], literal("%1", "y"));
+}
+
+#[test]
+fn ctrl_close_bracket_returns_to_the_list() {
+    let mut picker = Picker::new(vec![agent("dotfiles", "%1"), agent("webapp", "%2")]);
+
+    picker
+        .run(vec![
+            key(KeyCode::Char('i')),
+            ctrl(']'),
+            key(KeyCode::Char('j')),
+        ])
+        .unwrap();
+
+    assert!(picker.tmux.sent().is_empty());
+    let screen = picker.screen();
+    assert!(screen.contains("> 2 ○ idle     webapp"), "{screen}");
+}
+
+#[test]
+fn ctrl_5_is_how_legacy_terminals_report_ctrl_close_bracket() {
+    let mut picker = Picker::new(vec![agent("dotfiles", "%1"), agent("webapp", "%2")]);
+
+    picker
+        .run(vec![
+            key(KeyCode::Char('i')),
+            ctrl('5'),
+            key(KeyCode::Char('j')),
+        ])
+        .unwrap();
+
+    assert!(picker.tmux.sent().is_empty());
+    let screen = picker.screen();
+    assert!(screen.contains("> 2 ○ idle     webapp"), "{screen}");
+}
+
+#[test]
+fn a_failed_send_shows_the_error_and_returns_to_the_list() {
+    let mut picker = Picker::new(vec![agent("dotfiles", "%1"), agent("webapp", "%2")]);
+    picker.tmux.fail_actions();
+
+    picker
+        .run(vec![key(KeyCode::Char('i')), key(KeyCode::Char('h'))])
+        .unwrap();
+    let screen = picker.screen();
+    let footer = screen.lines().last().unwrap();
+    assert!(footer.starts_with("can't find pane: %9"), "{screen}");
+
+    picker.run(vec![key(KeyCode::Char('j'))]).unwrap();
+    let screen = picker.screen();
     assert!(screen.contains("> 2 ○ idle     webapp"), "{screen}");
 }
