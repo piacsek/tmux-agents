@@ -7,10 +7,10 @@ j/k ↓/↑  move
 gg / G   first / last                                       
 /        filter, Esc clears                                 
 Enter    focus pane                                         
+i        type into agent, Ctrl-] back                       
 n        new Claude pane                                    
 x        kill pane, asks y/n                                
 p        toggle preview                                     
 q / Esc  close                                              
 ?        toggle this help                                   
-                                                            
 tmux-agents v0.4.1                   press ? for keybindings

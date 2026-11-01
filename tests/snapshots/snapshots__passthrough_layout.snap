@@ -1,0 +1,12 @@
+---
+source: tests/snapshots.rs
+expression: picker.screen()
+---
+Allow this command?                                         
+  1. Yes                                                    
+  2. No                                                     
+                                                            
+> /com                                                      
+  /commit   Create a git commit                             
+                                                            
+→ webapp  Ctrl-] back

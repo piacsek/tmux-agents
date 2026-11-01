@@ -63,3 +63,21 @@ fn preview_layout() {
     picker.run(Vec::new()).unwrap();
     insta::assert_snapshot!(picker.screen());
 }
+
+#[test]
+fn passthrough_layout() {
+    let mut picker = Picker::new(sample());
+    picker.tmux.set_capture(
+        "%3",
+        &[
+            "Allow this command?",
+            "  1. Yes",
+            "  2. No",
+            "",
+            "> /com",
+            "  /commit   Create a git commit",
+        ],
+    );
+    picker.run(vec![key(KeyCode::Char('i'))]).unwrap();
+    insta::assert_snapshot!(picker.screen());
+}

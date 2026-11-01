@@ -64,10 +64,12 @@ impl App {
     }
 
     pub fn load_preview<T: Tmux>(&mut self, tmux: &T) {
-        self.preview = match self.selected_agent() {
-            Some(agent) if self.preview_enabled => tmux.capture(&agent.pane).ok(),
+        let pane = match &self.mode {
+            Mode::Passthrough(pane) => Some(pane.clone()),
+            _ if self.preview_enabled => self.selected_agent().map(|agent| agent.pane.clone()),
             _ => None,
         };
+        self.preview = pane.and_then(|pane| tmux.capture(&pane).ok());
     }
 
     pub fn refresh(&mut self, agents: Vec<Agent>) {
@@ -135,9 +137,20 @@ impl App {
 
     pub fn confirming(&self) -> Option<&Agent> {
         match &self.mode {
-            Mode::Confirm(pane) => self.agents.iter().find(|agent| &agent.pane == pane),
+            Mode::Confirm(pane) => self.agent_on(pane),
             _ => None,
         }
+    }
+
+    pub fn typing_into(&self) -> Option<&Agent> {
+        match &self.mode {
+            Mode::Passthrough(pane) => self.agent_on(pane),
+            _ => None,
+        }
+    }
+
+    fn agent_on(&self, pane: &PaneId) -> Option<&Agent> {
+        self.agents.iter().find(|agent| &agent.pane == pane)
     }
 
     fn handle_filter_key(&mut self, key: KeyEvent) -> Action {

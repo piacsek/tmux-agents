@@ -24,6 +24,9 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         draw_empty(frame, body);
     } else if let (Some(query), true) = (app.filter(), app.visible().is_empty()) {
         draw_no_matches(frame, body, query);
+    } else if let Mode::Passthrough(_) = app.mode {
+        let lines = last_lines(app.preview.as_deref().unwrap_or_default(), body.height);
+        frame.render_widget(Paragraph::new(lines), body);
     } else if let Some(lines) = preview_lines(app, body) {
         let split = Constraint::Percentage(app.config.preview.split_percent);
         let [list, preview] = Layout::horizontal([split, Constraint::Fill(1)]).areas(body);
@@ -39,14 +42,18 @@ fn preview_lines(app: &App, body: Rect) -> Option<Vec<Line<'static>>> {
     if body.width < app.config.preview.min_width {
         return None;
     }
-    let mut lines = styled(app.preview.as_ref()?);
+    Some(last_lines(app.preview.as_ref()?, body.height))
+}
+
+fn last_lines(raw: &[String], height: u16) -> Vec<Line<'static>> {
+    let mut lines = styled(raw);
     let end = lines
         .iter()
         .rposition(|line| !line.to_string().trim().is_empty())
         .map_or(0, |i| i + 1);
     lines.truncate(end);
-    let start = end.saturating_sub(body.height as usize);
-    Some(lines.split_off(start))
+    let start = end.saturating_sub(height as usize);
+    lines.split_off(start)
 }
 
 fn styled(raw: &[String]) -> Vec<Line<'static>> {
@@ -82,12 +89,13 @@ fn draw_no_matches(frame: &mut Frame, area: Rect, query: &str) {
     );
 }
 
-const KEYS: [(&str, &str); 10] = [
+const KEYS: [(&str, &str); 11] = [
     ("j/k ↓/↑", "move"),
     ("1-9", "focus row directly"),
     ("gg / G", "first / last"),
     ("/", "filter, Esc clears"),
     ("Enter", "focus pane"),
+    ("i", "type into agent, Ctrl-] back"),
     ("n", "new Claude pane"),
     ("x", "kill pane, asks y/n"),
     ("p", "toggle preview"),
@@ -149,10 +157,12 @@ fn draw_footer(frame: &mut Frame, area: Rect, app: &App) {
     } else {
         draw_mode(frame, left, app);
     }
-    frame.render_widget(
-        Paragraph::new(Span::styled(HELP_HINT, dim())).right_aligned(),
-        right,
-    );
+    if !matches!(app.mode, Mode::Passthrough(_)) {
+        frame.render_widget(
+            Paragraph::new(Span::styled(HELP_HINT, dim())).right_aligned(),
+            right,
+        );
+    }
 }
 
 fn draw_mode(frame: &mut Frame, left: Rect, app: &App) {
@@ -183,7 +193,22 @@ fn draw_mode(frame: &mut Frame, left: Rect, app: &App) {
                 left,
             );
         }
-        Mode::Normal | Mode::Passthrough(_) => {}
+        Mode::Passthrough(_) => {
+            let label = app
+                .typing_into()
+                .map(|agent| agent.label.as_str())
+                .unwrap_or("?");
+            let line = Line::from(vec![
+                Span::styled(
+                    format!("→ {label}"),
+                    Style::default().add_modifier(Modifier::BOLD),
+                ),
+                Span::raw("  "),
+                Span::styled("Ctrl-] back", dim()),
+            ]);
+            frame.render_widget(Paragraph::new(line), left);
+        }
+        Mode::Normal => {}
     }
 }
 

@@ -987,3 +987,41 @@ fn a_failed_send_shows_the_error_and_returns_to_the_list() {
     let screen = picker.screen();
     assert!(screen.contains("> 2 ○ idle     webapp"), "{screen}");
 }
+
+#[test]
+fn passthrough_shows_the_agents_pane_full_width_with_the_way_back() {
+    let mut picker = Picker::new(vec![agent("dotfiles", "%1"), agent("webapp", "%2")]);
+    picker
+        .tmux
+        .set_capture("%2", &["> /com", "  /commit  Create a git commit"]);
+
+    picker
+        .run(vec![key(KeyCode::Char('j')), key(KeyCode::Char('i'))])
+        .unwrap();
+
+    let screen = picker.screen();
+    let lines: Vec<&str> = screen.lines().collect();
+    assert_eq!(lines[0].trim_end(), "> /com", "{screen}");
+    assert_eq!(
+        lines[1].trim_end(),
+        "  /commit  Create a git commit",
+        "{screen}"
+    );
+    assert!(!screen.contains("dotfiles"), "{screen}");
+    assert!(
+        lines.last().unwrap().starts_with("→ webapp  Ctrl-] back"),
+        "{screen}"
+    );
+    assert!(!screen.contains("press ?"), "{screen}");
+}
+
+#[test]
+fn the_help_lists_typing_into_an_agent() {
+    let mut picker = Picker::with_size(vec![agent("dotfiles", "%1")], 60, 12);
+
+    picker.run(vec![key(KeyCode::Char('?'))]).unwrap();
+
+    let screen = picker.screen();
+    assert!(screen.contains("type into agent, Ctrl-] back"), "{screen}");
+    assert!(screen.contains("toggle this help"), "{screen}");
+}
