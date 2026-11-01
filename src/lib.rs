@@ -3,6 +3,7 @@ pub mod app;
 pub mod cached;
 pub mod cli;
 pub mod config;
+pub mod keys;
 pub mod process;
 pub mod registry;
 pub mod state;

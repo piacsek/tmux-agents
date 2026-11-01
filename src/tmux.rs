@@ -27,7 +27,7 @@ pub struct Client {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Key {
     Literal(String),
-    Named(&'static str),
+    Named(String),
 }
 
 pub trait Tmux {
@@ -349,7 +349,8 @@ mod tests {
     #[test]
     fn send_key_sends_a_named_key_by_name() {
         assert_eq!(
-            CliTmux::default().send_key_args(&PaneId("%7".to_string()), &Key::Named("Enter")),
+            CliTmux::default()
+                .send_key_args(&PaneId("%7".to_string()), &Key::Named("Enter".to_string())),
             vec!["send-keys", "-t", "%7", "Enter"]
         );
     }
