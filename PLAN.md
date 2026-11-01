@@ -358,6 +358,19 @@ patch (v0.4.1) at the user's request although the semver rule says minor for new
 Process: this phase adopts conveyor's flow (`scripts/gates.sh`, `scripts/ship.sh`,
 `scripts/dev-install.sh`, branch + draft PR, rebase-merge, tag from `main`).
 
+## Phase 6: type into an agent, colored preview (2026-11-01)
+
+Issue #2. Decisions: live passthrough instead of a separate input box, so Claude Code's own
+slash menu, `@` files and history keep working. `i` enters, `Ctrl-]` (also `Ctrl-5`) leaves,
+Ctrl-c and Esc are forwarded, the popup stays open afterwards. Color came first because
+Claude draws its cursor and menu highlight with SGR styling: `capture-pane -e` parsed by
+`ansi-to-tui` 8.0.1, which builds on the same `ratatui-core` 0.1 as ratatui 0.30, so no
+hand-written parser. `Key::Named` holds a `String` (the plan said `&'static str`) because
+`C-<c>` and `M-<c>` chords are built at runtime. The `?` hint is hidden in passthrough since
+`?` is forwarded. Known limits, deferred: up to one tick (500 ms) of preview lag per key,
+pasted text arrives key by key with an embedded newline submitting, Shift+Enter is
+indistinguishable from Enter.
+
 ## Retrospective checkpoints
 
 After each phase, before planning the next:

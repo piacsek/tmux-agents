@@ -11,11 +11,14 @@ watcher.
 ![picker](docs/picker.png)
 
 Keys: `j/k` move, `1-9` focus the numbered row, `/` filter, `Enter` focus,
-`n` new Claude pane, `x` kill (asks `y/n`), `p` toggle preview, `?` help,
-`q` quit. Failed tmux actions show in the footer; the popup stays open.
+`i` type into the agent, `n` new Claude pane, `x` kill (asks `y/n`), `p` toggle
+preview, `?` help, `q` quit. Failed tmux actions show in the footer; the popup
+stays open.
 
-- **Preview**: `p` shows the selected pane's screen on the right (popups ≥ 100
-  columns). Off by default; see `[preview]` below.
+- **Type into an agent**: `i` forwards every key, Ctrl-c and Esc included, to
+  the selected pane and shows it full-width; `Ctrl-]` returns to the list.
+- **Preview**: `p` shows the selected pane's screen, in its own colors, on the
+  right (popups ≥ 100 columns). Off by default; see `[preview]` below.
 - **Labels**: the cwd basename (or a `[labels]` entry); duplicates get
   `:<window index>`.
 - **Status line**: blocked sessions by name, the rest as counts.
