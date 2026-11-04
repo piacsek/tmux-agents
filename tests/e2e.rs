@@ -25,7 +25,7 @@ impl Server {
     }
 
     fn tmux(&self, args: &[&str]) -> Command {
-        let mut cmd = Command::new("tmux");
+        let mut cmd = isolated(Command::new("tmux"));
         cmd.arg("-L").arg(&self.socket).args(args);
         cmd
     }
@@ -124,7 +124,7 @@ fn status_subcommand_prints_tmux_markup_for_the_live_session() {
     let server = Server::start("status");
     let home = fixture_home(&server);
 
-    let out = Command::new(env!("CARGO_BIN_EXE_tmux-agents"))
+    let out = binary()
         .arg("status")
         .env("HOME", home.path())
         .env("TMUX", format!("{},0,0", server.socket_path()))
@@ -148,7 +148,7 @@ fn status_subcommand_prints_none_when_no_session_is_registered() {
     let server = Server::start("none");
     let home = tempfile::tempdir().unwrap();
 
-    let out = Command::new(env!("CARGO_BIN_EXE_tmux-agents"))
+    let out = binary()
         .arg("status")
         .env("HOME", home.path())
         .env("TMUX", format!("{},0,0", server.socket_path()))
@@ -242,7 +242,7 @@ fn watch_holds_a_single_lock_and_exits_when_the_server_dies() {
     fs::write(&config, "[watch]\nintervall_ms = 5\n").unwrap();
     let tmux_env = format!("{},0,0", server.socket_path());
     let spawn = || {
-        Command::new(env!("CARGO_BIN_EXE_tmux-agents"))
+        binary()
             .arg("watch")
             .env("HOME", home.path())
             .env("TMUX_AGENTS_CONFIG", &config)
@@ -297,4 +297,22 @@ fn watch_holds_a_single_lock_and_exits_when_the_server_dies() {
         stderr.contains("config.toml") && stderr.contains("intervall_ms"),
         "watch should run on defaults and report the broken config: {stderr}"
     );
+}
+
+const CALLER_ENV: [&str; 4] = [
+    "XDG_CONFIG_HOME",
+    "TMUX_AGENTS_CONFIG",
+    "CLAUDE_CONFIG_DIR",
+    "XDG_CACHE_HOME",
+];
+
+fn isolated(mut cmd: Command) -> Command {
+    for key in CALLER_ENV {
+        cmd.env_remove(key);
+    }
+    cmd
+}
+
+fn binary() -> Command {
+    isolated(Command::new(env!("CARGO_BIN_EXE_tmux-agents")))
 }
