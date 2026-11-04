@@ -194,21 +194,73 @@ Depth belongs here in `AGENTS.md`, not in the README.
 All guidelines live in this file, versioned with the code; nothing binding lives only in an
 agent's private memory. When the user says "update the guidelines", edit this file.
 
-- **Cadence.** Work runs under `/tdd autonomous`: one branch per phase (`phase-N-<topic>`),
-  one commit per task through `scripts/ship.sh`, no pause between tasks, a pause only for the
-  end-of-phase retro. Retro outcomes go to `PLAN.md` (facts, decisions) and here (rules).
+- **"Work autonomously" means the whole road to a release, without pausing**, not even for
+  the retro: its outcome is written into `PLAN.md` in step 4 and the user reads it there. When
+  the user says it (or "autonomous", "march towards release"), assume this flow and ask only
+  when a decision is genuinely theirs:
+  1. Plan in `plans/phase-N-<topic>.md` (next free N in `PLAN.md`), in a fresh worktree.
+  2. `/my-tdd autonomous`: one task per red-green-refactor cycle, each shipped with
+     `scripts/ship.sh` (gates, dev install, commit, push, draft PR on the first push).
+  3. `/pr-review` the PR (see "Review before ready"). Fix every must and should finding, TDD
+     like any change, ship, and review again. Minor findings are fixed when cheap, else listed
+     in the PR body. The loop ends only on a round with no must/should findings, and that
+     round is **unprimed**: the reviewers get the PR, the repo and this file, never the list
+     of earlier findings or what was decided about them. Never post the review on the PR.
+  4. The phase outcome is in `PLAN.md` and, for a behaviour change, the version bump is on the
+     branch. Re-read the PR title and body, fix what went stale, `gh pr ready`, wait for CI
+     green.
+  5. Rebase-merge. For a behaviour change, tag and release per "Releasing", watch `release`
+     to green and check the tap formula names the new version.
+  6. Remove the worktree, re-run `scripts/dev-install.sh` from the main checkout, and report
+     what shipped, with the release link.
+  Stop and ask instead of proceeding when: a gate fails for a reason the change did not
+  cause, CI fails twice on the same step, a review finding needs a product decision, or the
+  next step would force-push, push to `main` or delete a release.
+- **Cadence.** Outside the autonomous flow above, work runs under `/my-tdd autonomous`: one
+  branch per phase (`phase-N-<topic>`), one commit per task through `scripts/ship.sh`, no
+  pause between tasks, a pause only for the end-of-phase retro. Retro outcomes go to
+  `PLAN.md` (facts, decisions) and here (rules).
+- **One worktree per branch, by default.** Start every phase or fix in its own worktree off
+  `origin/main`: `git worktree add -b <branch> .claude/worktrees/<branch> origin/main`, then
+  `git branch --unset-upstream` so the first `ship.sh` push creates `origin/<branch>` instead
+  of tracking `main`. Work, gates and ships run from inside it; the main checkout stays on its
+  own branch, so two phases (and two agent sessions) never share an index or a `target/`.
+  `.claude/worktrees/` is gitignored. Each worktree builds its own `target/` from cold the
+  first time. `tmux-agents-dev` points at the worktree that last ran `dev-install.sh`, so
+  re-run it where you are testing, and from the main checkout once the worktree is removed.
+- **TDD is never skipped.** Every change to `src/` starts with a failing test, run and seen
+  red, before the production code is touched; then the smallest change that goes green, then
+  refactor. This holds for one-line fixes, security patches, patch releases and "obvious"
+  changes alike. Writing the test and the fix in the same edit is not TDD, even when the test
+  is then backed out to prove it fails. Show the red run in the update.
 - **Draft PR first.** The first ship on a branch opens the draft PR assigned to the user;
   every later commit lands on that PR. Before merging, re-read the PR title and body and fix
   what went stale without rewording the user's edits.
 - **Screenshots in PRs.** A PR with a visible change embeds the `docs/*.png` screenshots in
   its body as commit-pinned `raw.githubusercontent.com` URLs.
+- **Review before ready.** Marking a PR ready for review means running the
+  [`/pr-review`](https://github.com/piacsek/dotfiles/blob/main/.claude/skills/pr-review/SKILL.md)
+  skill on the PR first, and acting on what it finds. It runs a Claude and a Codex reviewer
+  over the diff and merges their findings; run it from the main session, because the skill
+  launches Codex there. Give both reviewers the intent of the change, point them at this
+  file, have the Claude reviewer run `scripts/gates.sh` itself rather than trust the claim
+  that the gates pass, and forbid edits, commits, and any write to GitHub. When the skill
+  asks whether to post the review on the PR, answer no. `gh pr ready` comes after the
+  findings are addressed, not before.
 - **Merging and releasing.** Rebase-merge the phase PR into `main` when CI is green, then tag
   from `main` (see Releasing). Never push to `main` directly, and never force-push.
+- **Catching up with `main` on a pushed branch is a merge, not a rebase.** A rebase rewrites
+  the pushed commits and the next `scripts/ship.sh` push is refused; the no-force-push rule
+  then leaves only `git reset --hard origin/<branch>`, `git merge origin/main` and a
+  cherry-pick of the new work. The rebase-merge into `main` drops the merge commit anyway.
 - **Two binaries.** `tmux-agents` on PATH is the Homebrew release, and it is what
   `.tmux.conf` runs; `tmux-agents-dev` is the working tree (`scripts/dev-install.sh`).
   Never `cargo install` the crate into a PATH directory.
-- **Plan before code.** Each phase starts from the plan in `PLAN.md`, is re-planned after the
-  previous retro, and its verified facts are checked against live tools before use.
+- **Plan before code, plans in the repo.** Each phase starts from a written plan, re-planned
+  after the previous retro, with its "Verified facts" checked against live tools before use.
+  Write each plan to its own file under `plans/` (for example `plans/phase-6-conveyor-guidelines.md`)
+  and commit it with the first ship of the phase; never leave a plan only in an agent's private
+  plan directory or memory. `PLAN.md` stays the index of phases, retros and the backlog.
 - **Approved plans become GitHub issues.** Once the user approves a plan, file it with
   `gh issue create --assignee @me`, title per the ticket rules (user-visible effect, plain
   language), body = the plan verbatim. The phase PR closes it (`Closes #N`).
@@ -249,6 +301,15 @@ cell coordinates are 0-based and rows start after the 2-cell highlight symbol
 plus the 2-cell row number (the glyph sits at x=4, the state word at x=6);
 right-aligned columns make every row the same length.
 
+**A scratch `HOME` does not isolate a launch.** `XDG_CONFIG_HOME` and `TMUX_AGENTS_CONFIG`
+outrank `HOME` for the config, `CLAUDE_CONFIG_DIR` for the registry and `XDG_CACHE_HOME` for
+the cache, and the user's shell exports `XDG_CONFIG_HOME`. `tests/e2e.rs` strips all four from
+the scratch tmux server (its panes inherit the server's environment, not `respawn-pane -e`
+alone) and from every direct launch, through `isolated()`; `scripts/screenshots.sh` unsets
+them up front. Any new launcher must do the same. Prove it with a hostile run: point all four
+at a scratch dir holding a config that changes `[status] prefix` and a fake session, then run
+`cargo test --no-fail-fast -- --include-ignored`.
+
 Install: `scripts/dev-install.sh` builds the release binary and symlinks it as
 `~/.local/bin/tmux-agents-dev`; `tmux-agents` on PATH is always the Homebrew release. A
 milestone is done only after the gates pass **and** `dev-install.sh` has run, so
@@ -275,6 +336,11 @@ pins by resolving the tag with `gh api repos/<owner>/<repo>/git/ref/tags/<tag>`
 `attestations: write` for `actions/attest-build-provenance`, which is what makes
 `gh attestation verify <tarball> --repo piacsek/tmux-agents` work. CI also runs
 `rustsec/audit-check` (`cargo audit`) as a separate job.
+
+Only behaviour changes get packaged. A release (version bump, tag, tarballs, tap) follows a
+change a user can observe in the binary: a key, a row, a default, a fix, a config key. Docs,
+CI, tests, scripts, refactors and guideline edits merge to `main` without a bump and ride the
+next behaviour release. Do not tag a docs-only or CI-only `main`.
 
 1. Bump `version` in `Cargo.toml` (`Cargo.lock` follows on the next build) and
    refresh the help snapshot: `INSTA_UPDATE=always cargo test --test snapshots`.
