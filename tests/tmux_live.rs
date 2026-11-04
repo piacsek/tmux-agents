@@ -9,7 +9,16 @@ struct Server;
 impl Server {
     fn start() -> Self {
         let status = Command::new("tmux")
-            .args(["-L", SOCKET, "new-session", "-d", "-s", "live"])
+            .args([
+                "-L",
+                SOCKET,
+                "-f",
+                "/dev/null",
+                "new-session",
+                "-d",
+                "-s",
+                "live",
+            ])
             .status()
             .expect("tmux binary on PATH");
         assert!(status.success(), "could not start tmux test server");

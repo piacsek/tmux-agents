@@ -26,7 +26,11 @@ impl Server {
 
     fn tmux(&self, args: &[&str]) -> Command {
         let mut cmd = isolated(Command::new("tmux"));
-        cmd.arg("-L").arg(&self.socket).args(args);
+        cmd.arg("-L")
+            .arg(&self.socket)
+            .arg("-f")
+            .arg("/dev/null")
+            .args(args);
         cmd
     }
 
