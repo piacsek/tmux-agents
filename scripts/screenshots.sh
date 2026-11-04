@@ -3,6 +3,7 @@
 # Never reads ~/.claude: HOME is a tempdir, the tmux socket is private.
 # Usage: scripts/screenshots.sh [out-dir]   (needs tmux, freeze, Google Chrome, cargo build --release)
 set -euo pipefail
+unset XDG_CONFIG_HOME TMUX_AGENTS_CONFIG CLAUDE_CONFIG_DIR XDG_CACHE_HOME
 
 out="${1:-docs}"
 root="$(cd "$(dirname "$0")/.." && pwd)"

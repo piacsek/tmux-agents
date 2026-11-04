@@ -358,6 +358,11 @@ patch (v0.4.1) at the user's request although the semver rule says minor for new
 Process: this phase adopts conveyor's flow (`scripts/gates.sh`, `scripts/ship.sh`,
 `scripts/dev-install.sh`, branch + draft PR, rebase-merge, tag from `main`).
 
+## Phase 6: conveyor's guidelines (2026-11-03)
+
+Plan: [plans/phase-6-conveyor-guidelines.md](plans/phase-6-conveyor-guidelines.md). Later
+phases keep their plans under `plans/`.
+
 ## Retrospective checkpoints
 
 After each phase, before planning the next:
