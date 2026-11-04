@@ -203,7 +203,7 @@ agent's private memory. When the user says "update the guidelines", edit this fi
      "Approved plans become GitHub issues") and put `Closes #N` in the PR body.
   2. `/my-tdd autonomous`: one task per red-green-refactor cycle, each shipped with
      `scripts/ship.sh` (gates, dev install, commit, push, draft PR on the first push).
-  3. `/pr-review` the PR (see "Review before ready"). Fix every must and should finding, TDD
+  3. `/pr-review` the PR (see "Review before ready"). Fix every must and should finding (the skill's "Worth fixing"), TDD
      like any change, ship, and review again. Minor findings are fixed when cheap, else listed
      in the PR body. The loop ends only on a round with no must/should findings, and that
      round is **unprimed**: the reviewers get the PR, the repo and this file, never the list
@@ -217,8 +217,9 @@ agent's private memory. When the user says "update the guidelines", edit this fi
      `scripts/dev-install.sh` there, so `tmux-agents-dev` is the merged code; then report
      what shipped, with the release link.
   Stop and ask instead of proceeding when: a gate fails for a reason the change did not
-  cause, CI fails twice on the same step, a review finding needs a product decision, or the
-  next step would force-push, push to `main` or delete a release.
+  cause, CI fails twice on the same step, a review finding needs a product decision, the PR
+  is not rebase-mergeable (a conflict resolved in a merge from `main` replays on rebase), or
+  the next step would force-push, push to `main` or delete a release.
 - **Cadence.** When the user has not asked for the full flow above, work still ships per task
   under `/my-tdd autonomous`: one branch per phase (`phase-N-<topic>`), one commit per task
   through `scripts/ship.sh`, no pause between tasks, but it pauses for the end-of-phase retro
@@ -252,8 +253,8 @@ agent's private memory. When the user says "update the guidelines", edit this fi
   that the gates pass, and forbid edits, commits, and any write to GitHub. When the skill
   asks whether to post the review on the PR, answer no. `gh pr ready` comes after the
   findings are addressed, not before.
-- **Merging and releasing.** Rebase-merge the phase PR into `main` when CI is green, then tag
-  from `main` (see Releasing). Never push to `main` directly, and never force-push.
+- **Merging and releasing.** Rebase-merge the phase PR into `main` when CI is green; for a
+  behaviour change, then tag from `main` (see Releasing). Never push to `main` directly, and never force-push.
 - **Catching up with `main` on a pushed branch is a merge, not a rebase.** A rebase rewrites
   the pushed commits and the next `scripts/ship.sh` push is refused; the no-force-push rule
   then leaves only `git reset --hard origin/<branch>`, `git merge origin/main` and a
