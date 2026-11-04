@@ -362,6 +362,14 @@ Process: this phase adopts conveyor's flow (`scripts/gates.sh`, `scripts/ship.sh
 
 Plan: [plans/phase-6-conveyor-guidelines.md](plans/phase-6-conveyor-guidelines.md). Later
 phases keep their plans under `plans/`.
+Outcome: the e2e and tmux tests ran against the caller's environment. With
+`XDG_CONFIG_HOME` exported (as on the user's machine) 5 of 6 e2e tests failed under a hostile
+config, `missing_tmux` failed under a broken one, and every scratch tmux server loaded
+`~/.tmux.conf`, which started a real `tmux-agents watch` against the real `HOME`. All launchers
+now strip the four variables and scratch servers start with `-f /dev/null`. CI dropped the
+release build and the second test pass, and takes a prebuilt cargo-audit. AGENTS.md carries
+conveyor's working agreements; the autonomous flow files its plan as an issue up front
+(#5). Not taken: conveyor's CHANGELOG and README lint. No release.
 
 ## Retrospective checkpoints
 
