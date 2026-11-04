@@ -198,7 +198,9 @@ agent's private memory. When the user says "update the guidelines", edit this fi
   the retro: its outcome is written into `PLAN.md` in step 4 and the user reads it there. When
   the user says it (or "autonomous", "march towards release"), assume this flow and ask only
   when a decision is genuinely theirs:
-  1. Plan in `plans/phase-N-<topic>.md` (next free N in `PLAN.md`), in a fresh worktree.
+  1. Plan in `plans/phase-N-<topic>.md` (next free N in `PLAN.md`), in a fresh worktree. The
+     user's request stands in for plan approval: file the plan as an issue right away (see
+     "Approved plans become GitHub issues") and put `Closes #N` in the PR body.
   2. `/my-tdd autonomous`: one task per red-green-refactor cycle, each shipped with
      `scripts/ship.sh` (gates, dev install, commit, push, draft PR on the first push).
   3. `/pr-review` the PR (see "Review before ready"). Fix every must and should finding, TDD
@@ -211,19 +213,22 @@ agent's private memory. When the user says "update the guidelines", edit this fi
      green.
   5. Rebase-merge. For a behaviour change, tag and release per "Releasing", watch `release`
      to green and check the tap formula names the new version.
-  6. Remove the worktree, re-run `scripts/dev-install.sh` from the main checkout, and report
+  6. Remove the worktree, `git pull --ff-only` on `main` in the main checkout and re-run
+     `scripts/dev-install.sh` there, so `tmux-agents-dev` is the merged code; then report
      what shipped, with the release link.
   Stop and ask instead of proceeding when: a gate fails for a reason the change did not
   cause, CI fails twice on the same step, a review finding needs a product decision, or the
   next step would force-push, push to `main` or delete a release.
-- **Cadence.** Outside the autonomous flow above, work runs under `/my-tdd autonomous`: one
-  branch per phase (`phase-N-<topic>`), one commit per task through `scripts/ship.sh`, no
-  pause between tasks, a pause only for the end-of-phase retro. Retro outcomes go to
+- **Cadence.** When the user has not asked for the full flow above, work still ships per task
+  under `/my-tdd autonomous`: one branch per phase (`phase-N-<topic>`), one commit per task
+  through `scripts/ship.sh`, no pause between tasks, but it pauses for the end-of-phase retro
+  instead of marching on to the release. Retro outcomes go to
   `PLAN.md` (facts, decisions) and here (rules).
 - **One worktree per branch, by default.** Start every phase or fix in its own worktree off
   `origin/main`: `git worktree add -b <branch> .claude/worktrees/<branch> origin/main`, then
-  `git branch --unset-upstream` so the first `ship.sh` push creates `origin/<branch>` instead
-  of tracking `main`. Work, gates and ships run from inside it; the main checkout stays on its
+  `git branch --unset-upstream <branch>` so the first `ship.sh` push creates `origin/<branch>`
+  instead of tracking `main` (name the branch: run from the main checkout, the bare form
+  unsets `main`'s upstream). Work, gates and ships run from inside it; the main checkout stays on its
   own branch, so two phases (and two agent sessions) never share an index or a `target/`.
   `.claude/worktrees/` is gitignored. Each worktree builds its own `target/` from cold the
   first time. `tmux-agents-dev` points at the worktree that last ran `dev-install.sh`, so
@@ -306,9 +311,14 @@ outrank `HOME` for the config, `CLAUDE_CONFIG_DIR` for the registry and `XDG_CAC
 the cache, and the user's shell exports `XDG_CONFIG_HOME`. `tests/e2e.rs` strips all four from
 the scratch tmux server (its panes inherit the server's environment, not `respawn-pane -e`
 alone) and from every direct launch, through `isolated()`; `scripts/screenshots.sh` unsets
-them up front. Any new launcher must do the same. Prove it with a hostile run: point all four
-at a scratch dir holding a config that changes `[status] prefix` and a fake session, then run
-`cargo test --no-fail-fast -- --include-ignored`.
+them up front. Every scratch server also starts with `-f /dev/null`: the real `~/.tmux.conf`
+runs `tmux-agents watch` and can `set-environment` the stripped variables back. Any new
+launcher must do the same. Prove it with a hostile run: point all four at a scratch dir
+holding a config that changes `[status] prefix` and a fake session, then run
+`cargo test --no-fail-fast -- --include-ignored`; repeat with a config that fails to load
+(an unknown key), which catches launchers whose assertions survive a valid one; for the tmux config, run the built test
+binaries with `HOME` at a scratch dir whose `.tmux.conf` sets those variables and opens a
+second session (cargo's asdf shim needs the real `HOME`).
 
 Install: `scripts/dev-install.sh` builds the release binary and symlinks it as
 `~/.local/bin/tmux-agents-dev`; `tmux-agents` on PATH is always the Homebrew release. A
