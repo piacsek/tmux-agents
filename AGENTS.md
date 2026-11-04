@@ -334,8 +334,13 @@ pins by resolving the tag with `gh api repos/<owner>/<repo>/git/ref/tags/<tag>`
 (dereference annotated tags via `git/tags/<sha>`). Workflows default to
 `contents: read`; only `publish` gets `contents: write` plus `id-token` and
 `attestations: write` for `actions/attest-build-provenance`, which is what makes
-`gh attestation verify <tarball> --repo piacsek/tmux-agents` work. CI also runs
-`rustsec/audit-check` (`cargo audit`) as a separate job.
+`gh attestation verify <tarball> --repo piacsek/tmux-agents` work. CI's `check` job runs
+`cargo test -- --include-ignored` once (unit, TUI and tmux e2e; the e2e tests take the debug
+binary from `CARGO_BIN_EXE_tmux-agents`, so no release build there). The `audit` job runs a
+prebuilt, checksum-verified `cargo-audit` from `taiki-e/install-action` with `fallback: none`:
+never `cargo install` a tool in CI (`rustsec/audit-check` compiled it from source on every
+run, about 3 minutes). A red `audit` check is the only advisory signal; the action used to
+open an issue instead.
 
 Only behaviour changes get packaged. A release (version bump, tag, tarballs, tap) follows a
 change a user can observe in the binary: a key, a row, a default, a fix, a config key. Docs,
